@@ -1,0 +1,192 @@
+/* src/pages/CompanyPage.css */
+
+/* Layout Container */
+.company-page-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  background: var(--theme-bg-gradient);
+  font-family: 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+/* Left Sidebar (Brand Panel) */
+.brand-sidebar {
+  width: 35%; /* Takes up left third */
+  background-color: var(--theme-sidebar);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem;
+  position: relative;
+  transition: all 0.5s ease;
+}
+
+/* For Launchpad, sidebar text needs to be black because background is lime */
+.brand-sidebar.dark-text {
+  color: #1a1a1a;
+}
+
+.brand-icon {
+  font-size: 5rem;
+  margin-bottom: 2rem;
+  animation: float 6s ease-in-out infinite;
+}
+
+.brand-name {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+}
+
+.brand-tagline {
+  font-size: 1.2rem;
+  opacity: 0.8;
+  font-weight: 300;
+}
+
+/* Right Content (Form Area) */
+.form-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+/* Form Card Styling */
+.ticket-form-card {
+  width: 100%;
+  max-width: 550px;
+  background: white;
+  padding: 3rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.6s ease-out;
+  border-top: 6px solid var(--theme-primary);
+}
+
+.form-header {
+  margin-bottom: 2.5rem;
+}
+
+.form-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.form-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* --- Input Fields (Replacing Tailwind) --- */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.form-input, 
+.form-textarea {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background-color: #f8fafc;
+  box-sizing: border-box; /* Crucial for width: 100% */
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background-color: white;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.form-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* --- Button --- */
+.submit-btn {
+  width: 100%;
+  padding: 1rem;
+  background: var(--theme-primary); /* Fallback */
+  background: linear-gradient(to right, var(--theme-primary), var(--theme-secondary));
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 1rem;
+}
+
+/* Special button text color for lighter backgrounds (Launchpad) */
+.submit-btn.dark-text {
+  color: #1a1a1a; 
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
+  .company-page-container {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  
+  .brand-sidebar {
+    width: 100%;
+    padding: 3rem 2rem;
+    align-items: center;
+    text-align: center;
+  }
+
+  .form-section {
+    padding: 1.5rem;
+  }
+
+  .ticket-form-card {
+    padding: 2rem;
+  }
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
