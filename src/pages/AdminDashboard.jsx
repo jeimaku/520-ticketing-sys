@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase'
 import AdminLogin from '../components/AdminLogin'
 import NotificationBell from '../components/NotificationBell'
 import ExportControls from '../components/ExportControls'
+import TicketThread from '../components/TicketThread' // New Import
+import TicketModal from '../components/TicketModal'
 import { useNotifications } from '../hooks/useNotifications'
-import './../styles/Admin.css' // Import the new styles
+import './../styles/Admin.css' // Ensure this path matches your existing CSS location
 
 const AdminDashboard = () => {
   const [tickets, setTickets] = useState([])
@@ -12,6 +14,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentAdmin, setCurrentAdmin] = useState(null)
+  
+  // New State for the Chat Modal
+  const [selectedTicket, setSelectedTicket] = useState(null)
   
   const [filters, setFilters] = useState({
     company: 'all',
@@ -51,7 +56,6 @@ const AdminDashboard = () => {
     const adminSession = localStorage.getItem('adminSession')
     if (adminSession) {
       const session = JSON.parse(adminSession)
-      // Session expiry logic...
       setCurrentAdmin(session)
       setIsAuthenticated(true)
     }
@@ -106,20 +110,17 @@ const AdminDashboard = () => {
     }
   }
 
-  // ... Filter logic remains exactly the same as previous file ...
-  // (Pasted here for brevity, assume getFilteredAndSortedTickets is defined)
   const getFilteredAndSortedTickets = () => {
     let filtered = tickets.filter(ticket => {
       if (filters.company !== 'all' && ticket.company_id !== filters.company) return false
       if (filters.status !== 'all' && ticket.status !== filters.status) return false
       if (filters.search) {
         const searchTerm = filters.search.toLowerCase()
-        const text = [ticket.contact_name, ticket.issue_description, ticket.companies.name].join(' ').toLowerCase()
+        const text = [ticket.contact_name, ticket.issue_description, ticket.companies?.name].join(' ').toLowerCase()
         if (!text.includes(searchTerm)) return false
       }
       return true
     })
-    // Sort logic...
     return filtered
   }
   const filteredTickets = getFilteredAndSortedTickets()
@@ -162,7 +163,7 @@ const AdminDashboard = () => {
             <div className="user-avatar">
               {currentAdmin?.email[0].toUpperCase()}
             </div>
-            <span style={{ display: 'none', '@media (min-width: 768px)': { display: 'inline' } }}>
+            <span className="user-email-text">
               {currentAdmin?.email}
             </span>
           </div>
@@ -256,13 +257,14 @@ const AdminDashboard = () => {
                   <th>Contact</th>
                   <th>Issue Description</th>
                   <th>Status</th>
+                  <th>Tracking</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTickets.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                       No tickets found matching your criteria.
                     </td>
                   </tr>
@@ -275,7 +277,7 @@ const AdminDashboard = () => {
                         {new Date(ticket.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{ticket.companies.name}</div>
+                        <div style={{ fontWeight: 600 }}>{ticket.companies?.name || 'Unknown'}</div>
                         <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{ticket.location}</div>
                       </td>
                       <td>
@@ -283,7 +285,7 @@ const AdminDashboard = () => {
                         <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{ticket.contact_email}</div>
                       </td>
                       <td>
-                        <div style={{ maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ticket.issue_description}>
+                        <div style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={ticket.issue_description}>
                           {ticket.issue_description}
                         </div>
                       </td>
@@ -292,17 +294,53 @@ const AdminDashboard = () => {
                           {ticket.status.replace('_', ' ')}
                         </span>
                       </td>
+                      
+                      {/* Tracking Column */}
                       <td>
-                        <select
-                          value={ticket.status}
-                          onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
-                          className="status-select"
+                        <a 
+                          href={`/track/${ticket.tracking_token}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ 
+                            color: '#2563eb', 
+                            textDecoration: 'none', 
+                            fontSize: '0.85rem', 
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
                         >
-                          <option value="open">Open</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="closed">Closed</option>
-                        </select>
+                          View
+                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </td>
+
+                      {/* Actions: Chat & Status */}
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => setSelectedTicket(ticket)}
+                            className="btn-outline"
+                            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                            title="Open Chat Thread"
+                          >
+                            <span>💬</span> Chat
+                          </button>
+
+                          <select
+                            value={ticket.status}
+                            onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
+                            className="status-select"
+                          >
+                            <option value="open">Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                          </select>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -312,6 +350,15 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* --- CHAT MODAL --- */}
+      {selectedTicket && (
+        <TicketModal 
+          ticket={selectedTicket} 
+          onClose={() => setSelectedTicket(null)} 
+        />
+      )}
+
     </div>
   )
 }

@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-// We assume CSS is imported in the parent or globally, 
-// but referencing the classes we just created.
+import { supabase } from '../lib/supabase' // Ensure this import is present
 
 const AdminLogin = ({ onLoginSuccess }) => {
   const [credentials, setCredentials] = useState({
@@ -24,29 +23,30 @@ const AdminLogin = ({ onLoginSuccess }) => {
     setError('')
 
     try {
-      // Hardcoded check for demo purposes
-      const validAdmins = [
-        { email: 'admin@stahl-materials.com', password: 'admin123' },
-        { email: 'admin@paysera.com', password: 'admin123' },
-        { email: 'admin@launchpad.com', password: 'admin123' },
-        { email: 'superadmin@system.com', password: 'superadmin123' }
-      ]
+      const { data, error } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('email', credentials.email)
+        .eq('password_hash', credentials.password) 
+        .single()
 
-      const adminFound = validAdmins.find(
-        admin => admin.email === credentials.email && admin.password === credentials.password
-      )
-
-      if (adminFound) {
-        localStorage.setItem('adminSession', JSON.stringify({
-          email: adminFound.email,
-          loginTime: new Date().toISOString()
-        }))
-        onLoginSuccess(adminFound)
-      } else {
+      if (error || !data) {
         setError('Invalid email or password')
+        return
       }
+
+      const adminSession = {
+        id: data.id,
+        email: data.email,
+        loginTime: new Date().toISOString()
+      }
+
+      localStorage.setItem('adminSession', JSON.stringify(adminSession))
+      onLoginSuccess(adminSession)
+      
     } catch (error) {
-      setError('Login failed. Please try again.')
+      console.error('Login error:', error)
+      setError('An unexpected error occurred.')
     } finally {
       setIsLoading(false)
     }
@@ -56,7 +56,6 @@ const AdminLogin = ({ onLoginSuccess }) => {
     <div className="login-wrapper">
       <div className="login-card">
         <div className="login-header">
-          {/* 520 Logo Style */}
           <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
              <span className="brand-text-main" style={{fontSize: '2.5rem'}}>FIVE TWENTY</span>
              <span className="brand-text-sub" style={{letterSpacing: '3px'}}>IT SERVICES</span>
@@ -95,26 +94,25 @@ const AdminLogin = ({ onLoginSuccess }) => {
             <div style={{ 
               background: '#fee2e2', color: '#b91c1c', 
               padding: '0.75rem', borderRadius: '0.5rem', 
-              marginBottom: '1.5rem', fontSize: '0.9rem' 
+              marginBottom: '1.5rem', fontSize: '0.9rem',
+              textAlign: 'center' 
             }}>
               {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn-primary"
-          >
-            {isLoading ? 'Verifying...' : 'Access Dashboard'}
-          </button>
-
-          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', marginBottom: '0.5rem' }}>Demo Credentials:</p>
-            <code style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textAlign: 'center', background: '#f8fafc', padding: '0.5rem', borderRadius: '0.25rem' }}>
-              admin@stahl-materials.com / admin123
-            </code>
+          {/* UPDATED BUTTON SECTION */}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn-primary"
+              style={{ width: 'auto', paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
+            >
+              {isLoading ? 'Verifying...' : 'Access Dashboard'}
+            </button>
           </div>
+
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>

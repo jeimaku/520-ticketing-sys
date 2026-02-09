@@ -36,6 +36,20 @@ export const companyThemes = {
     textColor: '#C6FF00', // Lime text on dark background
     formDark: true, // Special flag for dark mode form
     logo: '🚀'
+  },
+  'bestloan': {
+    name: 'Bestloan Credit Corporation',
+    // Royal Blue from the outer ring
+    primary: '#0033a0', 
+    // Gold/Yellow from the center badge
+    secondary: '#ffd700', 
+    // Red from the ribbon elements
+    accent: '#d32f2f', 
+    // A professional blue-to-white gradient
+    bgGradient: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', 
+    sidebarColor: '#0033a0', 
+    textColor: '#0033a0',
+    logo: '💰' // Or use '🏦'
   }
 }
 

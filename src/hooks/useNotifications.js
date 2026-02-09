@@ -8,103 +8,61 @@ export const useNotifications = (isAuthenticated) => {
   useEffect(() => {
     if (!isAuthenticated) return
 
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
-
-    // Subscribe to real-time changes
-    const subscription = supabase
-      .channel('tickets')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'tickets' 
-        }, 
-        (payload) => {
-          handleNewTicket(payload.new)
-        }
-      )
-      .on('postgres_changes',
+    // 1. Setup the channel
+    const channel = supabase
+      .channel('realtime-tickets')
+      .on(
+        'postgres_changes',
         {
-          event: 'UPDATE',
+          event: 'INSERT',
           schema: 'public',
-          table: 'tickets'
+          table: 'tickets',
         },
         (payload) => {
-          handleTicketUpdate(payload.new)
+          console.log('Realtime Update Received:', payload) // Debug log
+          const newTicket = payload.new
+          
+          // Create notification object
+          const newNotif = {
+            id: newTicket.id, // Use ticket ID or generate a random ID
+            title: 'New Ticket Received',
+            message: `${newTicket.contact_name}: ${newTicket.issue_description?.substring(0, 30)}...`,
+            timestamp: new Date(),
+            read: false,
+            ticketId: newTicket.id
+          }
+
+          // Update State
+          setNotifications((prev) => [newNotif, ...prev])
+          setNewTicketCount((prev) => prev + 1)
+          
+          // Play Sound (Optional)
+          try {
+            const audio = new Audio("https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3")
+            audio.volume = 0.5
+            audio.play().catch(e => console.error("Audio blocked", e))
+          } catch (e) {}
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Listening for new tickets...')
+        }
+      })
 
+    // 2. Cleanup
     return () => {
-      subscription.unsubscribe()
+      supabase.removeChannel(channel)
     }
   }, [isAuthenticated])
 
-  const handleNewTicket = async (ticket) => {
-    try {
-      // Fetch company name for the notification
-      const { data: company } = await supabase
-        .from('companies')
-        .select('name')
-        .eq('id', ticket.company_id)
-        .single()
-
-      const notification = {
-        id: ticket.id,
-        type: 'new_ticket',
-        title: 'New Support Ticket',
-        message: `New ticket from ${ticket.contact_name} at ${company?.name || 'Unknown Company'}`,
-        timestamp: new Date(),
-        read: false,
-        ticket: ticket
-      }
-
-      setNotifications(prev => [notification, ...prev])
-      setNewTicketCount(prev => prev + 1)
-
-      // Show browser notification
-      if (Notification.permission === 'granted') {
-        new Notification('New Support Ticket', {
-          body: `${ticket.contact_name} submitted a ticket at ${company?.name || 'Unknown Company'}`,
-          icon: '/favicon.ico',
-          tag: `ticket-${ticket.id}`
-        })
-      }
-
-      // Show desktop alert (optional)
-      if (window.confirm(`New ticket received from ${ticket.contact_name}. View now?`)) {
-        // Could scroll to ticket or open details
-        console.log('User wants to view ticket:', ticket.id)
-      }
-
-    } catch (error) {
-      console.error('Error handling new ticket notification:', error)
-    }
-  }
-
-  const handleTicketUpdate = async (ticket) => {
-    // You could add notifications for status changes here if needed
-    console.log('Ticket updated:', ticket.id)
-  }
-
-  const markAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
-          ? { ...notif, read: true }
-          : notif
-      )
-    )
+  const markAsRead = (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
     setNewTicketCount(prev => Math.max(0, prev - 1))
   }
 
   const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    )
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     setNewTicketCount(0)
   }
 

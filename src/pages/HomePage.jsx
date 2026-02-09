@@ -27,6 +27,12 @@ const HomePage = () => {
       theme: companyThemes['launchpad-coworking'],
       icon: '🚀',
       description: 'Creative workspace and collaboration'
+    },
+    {
+      slug: 'bestloan',
+      theme: companyThemes['bestloan'],
+      icon: '💰',
+      description: 'Financial assistance and credit services'
     }
   ];
 
@@ -50,10 +56,10 @@ const HomePage = () => {
             <p className="hero-subtitle">
               Professional IT Support & Ticket Management System
             </p>
-
+{/* 
             <p className="quote-text">
               "Ephesians 5:20 - Always giving thanks to God the Father for everything, in the name of our Lord Jesus Christ"
-            </p>
+            </p> */}
           </header>
 
           {/* Service/Company Portals */}

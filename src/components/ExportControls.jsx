@@ -1,22 +1,45 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { exportToCSV, exportToExcel } from '../utils/exportUtils'
 
 const ExportControls = ({ tickets, companies, filters }) => {
   const [isExporting, setIsExporting] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
+  const dropdownRef = useRef(null)
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowOptions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const handleExport = async (format) => {
+    // Prevent double clicks
+    if (isExporting) return
+
+    console.log(`Starting ${format} export...`) // Debug log
     setIsExporting(true)
     
     try {
+      // Small delay to show "Exporting..." state
+      await new Promise(resolve => setTimeout(resolve, 500))
+
       if (format === 'csv') {
         exportToCSV(tickets, companies, filters)
       } else if (format === 'excel') {
         exportToExcel(tickets, companies, filters)
       }
+      console.log('Export success')
     } catch (error) {
       console.error('Export error:', error)
-      alert('Error exporting data. Please try again.')
+      alert('Error exporting data: ' + error.message)
     } finally {
       setIsExporting(false)
       setShowOptions(false)
@@ -24,95 +47,59 @@ const ExportControls = ({ tickets, companies, filters }) => {
   }
 
   return (
-    <div className="relative">
-      {/* Export Button */}
+    <div className="export-wrapper" ref={dropdownRef} style={{ position: 'relative', zIndex: 50 }}>
       <button
+        type="button" // Explicitly set type to prevent form submission issues
         onClick={() => setShowOptions(!showOptions)}
         disabled={isExporting || tickets.length === 0}
-        className="flex items-center space-x-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="btn-outline"
+        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
       >
-        <svg 
-          className="w-4 h-4" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-          />
-        </svg>
-        <span>
-          {isExporting ? 'Exporting...' : `Export ${tickets.length} tickets`}
-        </span>
+        {isExporting ? (
+          <span>Exporting...</span>
+        ) : (
+          <>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Export {tickets.length > 0 ? `(${tickets.length})` : ''}</span>
+          </>
+        )}
       </button>
 
       {/* Export Options Dropdown */}
       {showOptions && (
-        <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="p-4">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">Export Options</h3>
-            
-            {/* CSV Export */}
+        <div className="export-dropdown">
+          <div className="export-header">
+            <span className="export-title">SELECT FORMAT</span>
+          </div>
+          
+          <div className="export-options">
             <button
+              type="button"
               onClick={() => handleExport('csv')}
-              className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg border border-gray-200 mb-2"
+              className="export-option-btn"
             >
-              <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                <span className="text-xs font-bold text-green-600">CSV</span>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900">CSV File</div>
-                <div className="text-xs text-gray-500">
-                  Plain text, opens in Excel/Sheets
-                </div>
+              <div className="option-icon csv">CSV</div>
+              <div className="option-details">
+                <span className="option-name">CSV File</span>
+                <span className="option-desc">Best for raw data analysis</span>
               </div>
             </button>
 
-            {/* Excel Export */}
             <button
+              type="button"
               onClick={() => handleExport('excel')}
-              className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg border border-gray-200 mb-3"
+              className="export-option-btn"
             >
-              <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                <span className="text-xs font-bold text-green-600">XLS</span>
+              <div className="option-icon excel">XLS</div>
+              <div className="option-details">
+                <span className="option-name">Excel File</span>
+                <span className="option-desc">Formatted report with summary</span>
               </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900">Excel File</div>
-                <div className="text-xs text-gray-500">
-                  Formatted spreadsheet with summary
-                </div>
-              </div>
-            </button>
-
-            {/* Export Info */}
-            <div className="pt-3 border-t border-gray-200">
-              <div className="text-xs text-gray-500">
-                <div>• Exports current filtered results</div>
-                <div>• Includes all ticket details</div>
-                <div>• Excel version has summary sheet</div>
-              </div>
-            </div>
-
-            {/* Close button */}
-            <button
-              onClick={() => setShowOptions(false)}
-              className="w-full mt-3 text-sm text-gray-600 hover:text-gray-800"
-            >
-              Cancel
             </button>
           </div>
         </div>
-      )}
-
-      {/* Overlay to close dropdown */}
-      {showOptions && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setShowOptions(false)}
-        ></div>
       )}
     </div>
   )
