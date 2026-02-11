@@ -3,32 +3,40 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getTheme } from '../styles/themes'
 import TicketForm from '../components/TicketForm'
-import './../styles/CompanyPage.css' // Import standard CSS
+import './../styles/CompanyPage.css'
 
 const CompanyPage = () => {
-  const { slug } = useParams()
+  // 1. Change param to portalCode
+  const { portalCode } = useParams()
   const [company, setCompany] = useState(null)
   const [loading, setLoading] = useState(true)
-  
-  // Get the theme configuration based on the URL slug
-  const theme = getTheme(slug)
+  const [theme, setTheme] = useState(getTheme('default')) // Default state
 
   useEffect(() => {
     fetchCompany()
-  }, [slug])
+  }, [portalCode])
 
   const fetchCompany = async () => {
     try {
+      // 2. Search by portal_code instead of slug
       const { data, error } = await supabase
         .from('companies')
         .select('*')
-        .eq('slug', slug)
+        .eq('portal_code', portalCode) // Matches the new DB column
         .single()
 
       if (error) throw error
+      
       setCompany(data)
+      
+      // 3. Use the retrieved slug to set the theme
+      if (data && data.slug) {
+        setTheme(getTheme(data.slug))
+      }
+      
     } catch (error) {
       console.error('Error fetching company:', error)
+      setCompany(null)
     } finally {
       setLoading(false)
     }
@@ -39,10 +47,14 @@ const CompanyPage = () => {
   }
 
   if (!company) {
-    return <div style={{ textAlign:'center', marginTop:'50px'}}>Company Portal Not Found</div>
+    return (
+      <div style={{ textAlign:'center', marginTop:'50px', fontFamily: 'Segoe UI' }}>
+        <h2>⚠️ Access Denied</h2>
+        <p>This portal link is invalid or has expired.</p>
+      </div>
+    )
   }
 
-  // Inline styles to inject CSS Variables dynamically
   const pageStyle = {
     '--theme-primary': theme.primary,
     '--theme-secondary': theme.secondary || theme.primary,
@@ -53,16 +65,25 @@ const CompanyPage = () => {
 
   return (
     <div className="company-page-container" style={pageStyle}>
-      
-      {/* Brand Sidebar (Left) */}
       <div className={`brand-sidebar ${theme.formDark ? 'dark-text' : ''}`}>
-        <div className="brand-icon">{theme.logo}</div>
+        {/* NEW CODE: Render as an image */}
+        <div className="brand-icon">
+          <img 
+            src={theme.logo} 
+            alt={`${theme.name} logo`} 
+            style={{ 
+              maxWidth: '300%', 
+              maxHeight: '450px', // Limits height so it doesn't look too huge
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))' // Adds a nice shadow
+            }} 
+          />
+        </div>
         <h1 className="brand-name">{theme.name}</h1>
         <p className="brand-tagline">Official Support Portal</p>
         <div style={{ marginTop: '2rem', height: '4px', width: '50px', background: theme.formDark ? 'black' : 'white', opacity: 0.5 }}></div>
       </div>
 
-      {/* Form Section (Right) */}
       <div className="form-section">
         <div className="ticket-form-card">
           <TicketForm 
@@ -70,15 +91,9 @@ const CompanyPage = () => {
             companyName={company.name} 
             theme={theme}
           />
-          
-          <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-            <a href="/" style={{ color: '#94a3b8', fontSize: '0.85rem', textDecoration: 'none' }}>
-              &larr; Back to Hub
-            </a>
-          </div>
+          {/* Removed "Back to Hub" link to keep it isolated */}
         </div>
       </div>
-
     </div>
   )
 }

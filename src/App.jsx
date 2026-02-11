@@ -12,7 +12,7 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/company/:slug" element={<CompanyPage />} />
+          <Route path="/portal/:portalCode" element={<CompanyPage />} />
           <Route path="/track/:token" element={<TrackingPage />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route 

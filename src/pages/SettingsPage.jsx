@@ -63,7 +63,7 @@ const SettingsPage = ({ currentAdmin }) => {
             >
               🔄 Refresh Dashboard
             </button>
-            <button 
+            {/* <button 
               className="btn-outline"
               onClick={() => {
                 if (window.confirm('Are you sure you want to clear your local session data?')) {
@@ -74,7 +74,7 @@ const SettingsPage = ({ currentAdmin }) => {
               }}
             >
               🗑️ Clear Local Data
-            </button>
+            </button> */}
           </div>
         </div>
 

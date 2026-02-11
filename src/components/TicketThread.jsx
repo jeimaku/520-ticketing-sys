@@ -1,55 +1,63 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { MessageBubble } from './MessageRenderer'
 
-const TicketThread = ({ ticketId, senderType, senderName, readOnly = false }) => {
+const TicketThread = ({ 
+  ticketId, 
+  senderType, 
+  senderName, 
+  readOnly = false,
+  viewerType = 'user'
+}) => {
+  const [showReactions, setShowReactions] = useState(false)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
   const [hasNewMessages, setHasNewMessages] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [otherPersonTyping, setOtherPersonTyping] = useState(false)
+  const [userScrolledUp, setUserScrolledUp] = useState(false)
+  const [replyingTo, setReplyingTo] = useState(null) // Message being replied to
+  const [showTypingIndicator, setShowTypingIndicator] = useState(false)
   
   const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
   const lastMessageCountRef = useRef(0)
   const pollingIntervalRef = useRef(null)
-  const typingTimeoutRef = useRef(null)
-  const lastTypingBroadcastRef = useRef(0)
+  const lastScrollTop = useRef(0)
+  const inputRef = useRef(null)
 
-  // Format timestamp
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffInHours = (now - date) / (1000 * 60 * 60)
+  // Check if user is near the bottom
+  const isNearBottom = () => {
+    if (!messagesContainerRef.current) return true
     
-    if (diffInHours < 24) {
-      // Today - show time only
-      return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      })
-    } else if (diffInHours < 48) {
-      // Yesterday
-      return 'Yesterday ' + date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      })
-    } else {
-      // Older - show date and time
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      }) + ' ' + date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      })
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current
+    const threshold = 100
+    return scrollHeight - scrollTop - clientHeight < threshold
+  }
+
+  // Handle scroll events
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return
+    
+    const { scrollTop } = messagesContainerRef.current
+    const scrollingUp = scrollTop < lastScrollTop.current
+    const nearBottom = isNearBottom()
+    
+    setUserScrolledUp(scrollingUp && !nearBottom)
+    lastScrollTop.current = scrollTop
+  }
+
+  // Smart scroll to bottom
+  const scrollToBottom = (force = false) => {
+    if (!messagesEndRef.current) return
+    
+    if (force || (!userScrolledUp && isNearBottom())) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+      setUserScrolledUp(false)
     }
   }
 
-  // Fetch messages and mark as read
+  // Fetch messages
   const fetchMessages = async (showNotification = false) => {
     try {
       const { data, error } = await supabase
@@ -61,20 +69,27 @@ const TicketThread = ({ ticketId, senderType, senderName, readOnly = false }) =>
       if (error) throw error
       
       if (data) {
-        // Check if there are new messages
-        if (showNotification && data.length > lastMessageCountRef.current) {
+        const hadNewMessages = showNotification && data.length > lastMessageCountRef.current
+        if (hadNewMessages) {
           const newCount = data.length - lastMessageCountRef.current
           console.log(`✨ ${newCount} new message(s) received!`)
           setHasNewMessages(true)
           
-          // Auto-dismiss notification after 3 seconds
+          // Show typing indicator briefly for realism
+          setShowTypingIndicator(true)
+          setTimeout(() => setShowTypingIndicator(false), 1000)
+          
           setTimeout(() => setHasNewMessages(false), 3000)
+          
+          if (!userScrolledUp) {
+            setTimeout(() => scrollToBottom(), 500)
+          }
         }
         
         lastMessageCountRef.current = data.length
         setMessages(data)
 
-        // Mark unread messages as read (messages not from me)
+        // Mark unread messages as read
         const unreadMessages = data.filter(
           msg => !msg.is_read && msg.sender_type !== senderType
         )
@@ -92,403 +107,518 @@ const TicketThread = ({ ticketId, senderType, senderName, readOnly = false }) =>
     }
   }
 
-  // Broadcast typing status (throttled)
-  const broadcastTyping = async () => {
-    const now = Date.now()
-    // Only broadcast once per 2 seconds to avoid spam
-    if (now - lastTypingBroadcastRef.current < 2000) return
-    
-    lastTypingBroadcastRef.current = now
-    
-    // Store typing status in a separate table or use broadcast
-    // For simplicity, we'll use localStorage as a signal
-    localStorage.setItem(`typing_${ticketId}_${senderType}`, Date.now().toString())
-  }
-
-  // Check if other person is typing
-  const checkOtherPersonTyping = () => {
-    const otherType = senderType === 'user' ? 'admin' : 'user'
-    const typingTimestamp = localStorage.getItem(`typing_${ticketId}_${otherType}`)
-    
-    if (typingTimestamp) {
-      const timestamp = parseInt(typingTimestamp)
-      const now = Date.now()
-      // Show typing if they typed within last 3 seconds
-      setOtherPersonTyping(now - timestamp < 3000)
-    } else {
-      setOtherPersonTyping(false)
-    }
-  }
-
-  // Initial fetch and polling setup
+  // Initial load
   useEffect(() => {
     fetchMessages()
-
-    // Set up polling every 3 seconds for messages
-    pollingIntervalRef.current = setInterval(() => {
-      fetchMessages(true)
-      checkOtherPersonTyping()
-    }, 3000)
-
-    // Cleanup
+    setTimeout(() => scrollToBottom(true), 100)
+    
+    const interval = setInterval(() => fetchMessages(true), 3000)
+    pollingIntervalRef.current = interval
+    
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current)
-      }
-      // Clear typing indicator
-      localStorage.removeItem(`typing_${ticketId}_${senderType}`)
+      clearInterval(interval)
     }
   }, [ticketId])
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  // Handle typing
-  const handleTyping = (e) => {
-    setNewMessage(e.target.value)
-    
-    // Broadcast that user is typing
-    broadcastTyping()
-    
-    // Clear typing indicator after 3 seconds of no typing
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
-    }
-    
-    typingTimeoutRef.current = setTimeout(() => {
-      localStorage.removeItem(`typing_${ticketId}_${senderType}`)
-    }, 3000)
-  }
-
-  const handleFileUpload = async () => {
-    if (!selectedFile) return null
-
-    const fileExt = selectedFile.name.split('.').pop()
-    const safeName = selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_')
-    const fileName = `${ticketId}/${Date.now()}_${safeName}.${fileExt}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('ticket-attachments')
-      .upload(fileName, selectedFile)
-
-    if (uploadError) {
-      console.error('❌ Upload Error:', uploadError)
-      alert('Error uploading file: ' + uploadError.message)
-      return null
-    }
-
-    const { data } = supabase.storage
-      .from('ticket-attachments')
-      .getPublicUrl(fileName)
-
-    return {
-      name: selectedFile.name,
-      url: data.publicUrl,
-      type: selectedFile.type
+  // Handle reply
+  const handleReply = (messageData) => {
+    setReplyingTo(messageData)
+    if (inputRef.current) {
+      inputRef.current.focus()
     }
   }
 
-  const handleSendMessage = async (e) => {
+  // Handle file selection
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0]
+    if (file && file.size <= 10 * 1024 * 1024) {
+      setSelectedFile(file)
+    } else {
+      alert('File size must be less than 10MB')
+    }
+  }
+
+  // Send message
+  const sendMessage = async (e) => {
     e.preventDefault()
-    if (!newMessage.trim() && !selectedFile) return
+    if ((!newMessage.trim() && !selectedFile) || uploading) return
 
     setUploading(true)
-    
-    // Clear typing indicator immediately
-    localStorage.removeItem(`typing_${ticketId}_${senderType}`)
+    let attachmentUrl = null
 
     try {
-      let attachmentData = []
-      
       if (selectedFile) {
-        const fileData = await handleFileUpload()
-        if (fileData) {
-          attachmentData.push(fileData)
+        const fileExt = selectedFile.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const filePath = `ticket-attachments/${ticketId}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('attachments')
+          .upload(filePath, selectedFile)
+
+        if (uploadError) {
+          console.warn('File upload failed:', uploadError)
         } else {
-          setUploading(false)
-          return 
+          const { data } = supabase.storage
+            .from('attachments')
+            .getPublicUrl(filePath)
+          
+          attachmentUrl = data.publicUrl
         }
       }
 
-      // ✅ OPTIMISTIC UPDATE
-      const tempId = `temp-${Date.now()}`
-      const optimisticMessage = {
-        id: tempId,
+      // Prepare message with reply data if replying
+      let finalMessage = newMessage.trim() || `📎 Sent an attachment: ${selectedFile?.name}`
+      
+      if (replyingTo) {
+        // 1. Get the original message text (truncate if it's too long)
+        const originalText = replyingTo.message || 'Attachment'
+        const quotedText = originalText.length > 50 
+          ? originalText.substring(0, 50) + '...' 
+          : originalText
+
+        // 2. Format it with Bold header and Quotes
+        // The \n\n adds a space between the quote and your new message
+        finalMessage = `Replying to ${replyingTo.senderName}: "${quotedText}"\n\n${finalMessage}`
+      }
+
+      const messageData = {
         ticket_id: ticketId,
         sender_type: senderType,
         sender_name: senderName,
-        message: newMessage,
-        attachments: attachmentData,
-        is_read: false,
-        created_at: new Date().toISOString()
+        message: finalMessage,
+        created_at: new Date().toISOString(),
+        // Note: In a real implementation, you'd want to store reply data properly in the database
+        // reply_to_id: replyingTo?.messageId || null
       }
 
-      setMessages(prev => [...prev, optimisticMessage])
-      lastMessageCountRef.current += 1
+      if (attachmentUrl) {
+        messageData.attachment_url = attachmentUrl
+      }
 
-      // Clear inputs
-      const messageToSend = newMessage
-      setNewMessage('')
-      setSelectedFile(null)
-
-      // Insert to database
-      const { data: insertedData, error } = await supabase
+      const { error } = await supabase
         .from('ticket_messages')
-        .insert([{
-          ticket_id: ticketId,
-          sender_type: senderType,
-          sender_name: senderName,
-          message: messageToSend,
-          attachments: attachmentData, 
-          is_read: false
-        }])
-        .select()
+        .insert([messageData])
 
       if (error) throw error
 
-      // Replace temp message with real one
-      if (insertedData && insertedData.length > 0) {
-        setMessages(prev => 
-          prev.map(msg => msg.id === tempId ? insertedData[0] : msg)
-        )
-      }
+      setNewMessage('')
+      setSelectedFile(null)
+      setReplyingTo(null) // Clear reply
+      
+      setTimeout(() => {
+        scrollToBottom(true)
+        fetchMessages()
+      }, 100)
 
     } catch (error) {
-      console.error('❌ Error sending message:', error)
-      alert('Failed to send message.')
-      fetchMessages()
+      console.error('Error sending message:', error)
+      alert('Failed to send message. Please try again.')
     } finally {
       setUploading(false)
     }
   }
 
+  // Handle quick reactions
+  const handleQuickReaction = (emoji) => {
+    setNewMessage(emoji)
+    // Auto-send emoji reactions
+    setTimeout(() => {
+      if (inputRef.current) {
+        const event = new Event('submit', { bubbles: true, cancelable: true })
+        inputRef.current.closest('form').dispatchEvent(event)
+      }
+    }, 100)
+  }
+
+  const styles = {
+    container: {
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+      borderRadius: '1rem',
+      border: '1px solid #e2e8f0',
+      overflow: 'hidden',
+      position: 'relative'
+    },
+    messagesContainer: {
+      flex: 1,
+      overflowY: 'auto',
+      padding: '1rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.5rem',
+      scrollbarWidth: 'thin',
+      scrollbarColor: '#cbd5e1 transparent'
+    },
+    inputContainer: {
+      padding: '1rem 1.5rem',
+      borderTop: '1px solid #e2e8f0',
+      background: 'white',
+      borderBottomLeftRadius: '1rem',
+      borderBottomRightRadius: '1rem'
+    },
+    replyPreview: {
+      background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+      border: '1px solid #3b82f6',
+      borderRadius: '0.75rem',
+      padding: '0.75rem 1rem',
+      marginBottom: '0.75rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    },
+    quickReactions: {
+      display: 'flex',
+      gap: '0.5rem',
+      marginBottom: '0.75rem',
+      padding: '0.5rem',
+      background: '#f8fafc',
+      borderRadius: '0.75rem',
+      border: '1px solid #e2e8f0'
+    },
+    quickReactionBtn: {
+      background: 'white',
+      border: '1px solid #d1d5db',
+      borderRadius: '50%',
+      width: '36px',
+      height: '36px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      fontSize: '1.1rem',
+      transition: 'all 0.2s'
+    },
+    inputForm: {
+      display: 'flex',
+      gap: '0.75rem',
+      alignItems: 'flex-end'
+    },
+    textInput: {
+      flex: 1,
+      padding: '0.875rem 1.25rem',
+      border: '1px solid #d1d5db',
+      borderRadius: '1.5rem',
+      fontSize: '0.9rem',
+      resize: 'none',
+      minHeight: '44px',
+      maxHeight: '120px',
+      fontFamily: 'inherit',
+      background: 'white',
+      outline: 'none',
+      transition: 'all 0.2s',
+      lineHeight: '1.4'
+    },
+    sendButton: {
+      padding: '0.875rem 1.5rem',
+      background: viewerType === 'admin' ? '#1e293b' : '#3b82f6',
+      color: 'white',
+      border: 'none',
+      borderRadius: '1.5rem',
+      fontWeight: '600',
+      cursor: 'pointer',
+      fontSize: '0.9rem',
+      transition: 'all 0.2s',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      height: '44px'
+    },
+    fileButton: {
+      padding: '0.875rem',
+      background: '#f3f4f6',
+      color: '#6b7280',
+      border: '1px solid #d1d5db',
+      borderRadius: '50%',
+      cursor: 'pointer',
+      fontSize: '1.1rem',
+      transition: 'all 0.2s',
+      width: '44px',
+      height: '44px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    emptyState: {
+      textAlign: 'center',
+      padding: '4rem 2rem',
+      color: '#9ca3af',
+      fontSize: '0.9rem',
+      background: 'white',
+      borderRadius: '1rem',
+      margin: '2rem',
+      border: '2px dashed #e5e7eb'
+    },
+    notification: {
+      position: 'absolute',
+      top: '1rem',
+      right: '1rem',
+      background: '#10b981',
+      color: 'white',
+      padding: '0.5rem 1rem',
+      borderRadius: '0.75rem',
+      fontSize: '0.8rem',
+      fontWeight: '600',
+      animation: 'slideInRight 0.3s ease',
+      zIndex: 10,
+      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+    },
+    typingIndicator: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      padding: '1rem',
+      color: '#64748b',
+      fontSize: '0.85rem',
+      fontStyle: 'italic'
+    },
+    filePreview: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+      padding: '0.75rem',
+      background: '#f0f9ff',
+      border: '1px solid #bae6fd',
+      borderRadius: '0.75rem',
+      fontSize: '0.85rem',
+      marginBottom: '0.75rem'
+    }
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', border: '1px solid #e2e8f0', borderRadius: '1rem', background: '#fff', overflow: 'hidden', position: 'relative' }}>
-      
-      {/* New Message Notification */}
+    <div style={styles.container}>
       {hasNewMessages && (
-        <div style={{
-          position: 'absolute',
-          top: '60px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: '#10b981',
-          color: 'white',
-          padding: '0.5rem 1rem',
-          borderRadius: '999px',
-          fontSize: '0.85rem',
-          fontWeight: '600',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)',
-          zIndex: 10,
-          animation: 'slideDown 0.3s ease-out',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          <span>✨</span> New message received!
+        <div style={styles.notification}>
+          ✨ New message received
         </div>
       )}
-
-      {/* Header */}
-      <div style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', fontWeight: '600', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
-        <span>Conversation History</span>
-        <span style={{ fontSize: '0.75rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          ● Auto-updating
-        </span>
-      </div>
-
-      {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: '300px', maxHeight: '500px' }}>
+      
+      <div 
+        ref={messagesContainerRef}
+        style={styles.messagesContainer}
+        onScroll={handleScroll}
+      >
         {messages.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem', marginTop: '2rem' }}>
-            No messages yet. Start the conversation!
+          <div style={styles.emptyState}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💬</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem', color: '#64748b' }}>
+              No messages yet
+            </div>
+            <div>Start the conversation to begin receiving support</div>
           </div>
         ) : (
-          messages.map((msg, index) => {
-            const isMe = msg.sender_type === senderType
-            const isOptimistic = msg.id?.toString().startsWith('temp-')
-            const showTimestamp = index === 0 || 
-              (new Date(msg.created_at) - new Date(messages[index - 1].created_at)) > 300000 // 5 minutes
-            
-            return (
-              <div key={msg.id}>
-                {/* Timestamp Divider */}
-                {showTimestamp && (
-                  <div style={{ 
-                    textAlign: 'center', 
-                    fontSize: '0.7rem', 
-                    color: '#94a3b8', 
-                    margin: '1rem 0 0.5rem',
-                    fontWeight: '500'
-                  }}>
-                    {formatTime(msg.created_at)}
-                  </div>
-                )}
-                
-                <div style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '85%', display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                  {/* Sender name (only for other person) */}
-                  {!isMe && (
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem', padding: '0 0.5rem', fontWeight: '600' }}>
-                      {msg.sender_name}
-                    </div>
-                  )}
-                  
-                  <div style={{ 
-                    padding: '1rem', 
-                    borderRadius: '1rem', 
-                    borderTopRightRadius: isMe ? '0' : '1rem',
-                    borderTopLeftRadius: isMe ? '1rem' : '0',
-                    background: isMe ? '#2563eb' : 'white', 
-                    color: isMe ? 'white' : '#334155',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                    border: isMe ? 'none' : '1px solid #e2e8f0',
-                    opacity: isOptimistic ? 0.7 : 1,
-                    transition: 'opacity 0.3s',
-                    position: 'relative'
-                  }}>
-                    {msg.message && <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{msg.message}</p>}
-                    
-                    {/* Attachments */}
-                    {msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
-                      <div style={{ marginTop: msg.message ? '0.75rem' : '0', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        {msg.attachments.map((file, idx) => (
-                          <div key={idx}>
-                            {(file.type && file.type.startsWith('image/')) || (file.name && file.name.match(/\.(jpg|jpeg|png|gif)$/i)) ? (
-                              <a href={file.url} target="_blank" rel="noopener noreferrer">
-                                <img 
-                                  src={file.url} 
-                                  alt={file.name} 
-                                  style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '0.5rem', border: '1px solid rgba(0,0,0,0.1)' }} 
-                                />
-                              </a>
-                            ) : (
-                              <a href={file.url} target="_blank" rel="noopener noreferrer" 
-                                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: isMe ? 'white' : '#2563eb', fontSize: '0.85rem', background: isMe ? 'rgba(255,255,255,0.2)' : '#f1f5f9', padding: '0.5rem', borderRadius: '0.5rem' }}>
-                                <span>📎</span> {file.name}
-                              </a>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Message time and read status */}
-                    <div style={{ 
-                      fontSize: '0.65rem', 
-                      marginTop: '0.5rem', 
-                      color: isMe ? 'rgba(255,255,255,0.7)' : '#94a3b8',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      justifyContent: 'flex-end'
-                    }}>
-                      {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                      {isMe && (
-                        <span style={{ marginLeft: '0.25rem' }}>
-                          {isOptimistic ? '○' : msg.is_read ? '✓✓' : '✓'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )
-          })
+          messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              messageId={message.id}
+              message={message.message}
+              senderType={message.sender_type}
+              senderName={message.sender_name}
+              timestamp={message.created_at}
+              isRead={message.is_read}
+              showSender={true}
+              viewerType={viewerType}
+              onReply={handleReply}
+              replyTo={message.reply_to_id ? messages.find(m => m.id === message.reply_to_id) : null}
+            />
+          ))
         )}
-        
-        {/* Typing Indicator */}
-        {otherPersonTyping && (
-          <div style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
-            <div style={{ 
-              padding: '0.75rem 1rem', 
-              borderRadius: '1rem', 
-              borderTopLeftRadius: '0',
-              background: 'white', 
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-              border: '1px solid #e2e8f0',
-              display: 'flex',
-              gap: '0.25rem',
-              alignItems: 'center'
-            }}>
-              <div className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#94a3b8', animation: 'typing 1.4s infinite' }}></div>
-              <div className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#94a3b8', animation: 'typing 1.4s infinite 0.2s' }}></div>
-              <div className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#94a3b8', animation: 'typing 1.4s infinite 0.4s' }}></div>
+
+        {/* Typing indicator */}
+        {showTypingIndicator && (
+          <div style={styles.typingIndicator}>
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <div style={{ 
+                width: '6px', 
+                height: '6px', 
+                background: '#64748b', 
+                borderRadius: '50%',
+                animation: 'typing 1.4s infinite'
+              }} />
+              <div style={{ 
+                width: '6px', 
+                height: '6px', 
+                background: '#64748b', 
+                borderRadius: '50%',
+                animation: 'typing 1.4s infinite 0.2s'
+              }} />
+              <div style={{ 
+                width: '6px', 
+                height: '6px', 
+                background: '#64748b', 
+                borderRadius: '50%',
+                animation: 'typing 1.4s infinite 0.4s'
+              }} />
             </div>
+            Someone is typing...
           </div>
         )}
         
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-
-      {/* Input Area - Conditionally Rendered */}
-      {readOnly ? (
-        <div style={{ padding: '1rem', background: '#ffffff', borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#ef4444', fontWeight: '500', background: '#fef2f2', padding: '0.75rem', borderRadius: '0.5rem', border: '1px dashed #fecaca' }}>
-            ⚠️ You are logged in as Admin. <br/>
-            Please reply via the <b>Admin Dashboard</b> to avoid confusion.
-          </p>
+      {userScrolledUp && hasNewMessages && (
+        <div 
+          style={{
+            position: 'absolute',
+            bottom: '1.5rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#3b82f6',
+            color: 'white',
+            padding: '0.5rem 1rem',
+            borderRadius: '999px',
+            fontSize: '0.8rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+            transition: 'all 0.2s',
+            zIndex: 10
+          }}
+          onClick={() => scrollToBottom(true)}
+        >
+          ↓ New messages below
         </div>
-      ) : (
-      <form onSubmit={handleSendMessage} style={{ padding: '1rem', background: 'white', borderTop: '1px solid #f1f5f9' }}>
-        {selectedFile && (
-          <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#eff6ff', padding: '0.5rem', borderRadius: '0.5rem' }}>
-            <span>📄 {selectedFile.name}</span>
-            <button type="button" onClick={() => setSelectedFile(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 'bold' }}>✕</button>
-          </div>
-        )}
-        
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <label style={{ cursor: 'pointer', padding: '0.8rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', color: '#64748b', background: '#f8fafc' }} title="Attach File">
-            <input type="file" style={{ display: 'none' }} onChange={(e) => setSelectedFile(e.target.files[0])} />
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-          </label>
-          
-          <input
-            type="text"
-            value={newMessage}
-            onChange={handleTyping}
-            placeholder="Type your message..."
-            disabled={uploading}
-            style={{ flex: 1, padding: '0.8rem 1rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', outline: 'none' }}
-          />
-          
-          <button 
-            type="submit" 
-            disabled={uploading || (!newMessage.trim() && !selectedFile)}
-            style={{ padding: '0 1.5rem', borderRadius: '0.75rem', border: 'none', background: '#2563eb', color: 'white', fontWeight: '600', cursor: 'pointer', opacity: (uploading || (!newMessage.trim() && !selectedFile)) ? 0.5 : 1 }}
-          >
-            {uploading ? '...' : 'Send'}
-          </button>
-        </div>
-      </form>
       )}
 
-      {/* CSS Animations */}
+      {!readOnly && (
+        <div style={styles.inputContainer}>
+          {/* Reply Preview */}
+          {replyingTo && (
+            <div style={styles.replyPreview}>
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1e40af', marginBottom: '0.25rem' }}>
+                  Replying to {replyingTo.senderName}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#475569' }}>
+                  {replyingTo.message}
+                </div>
+              </div>
+              <button 
+                onClick={() => setReplyingTo(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  fontSize: '1.2rem',
+                  padding: '0.25rem'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Quick Reactions */}
+          <div style={styles.quickReactions}>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginRight: '0.5rem', display: 'flex', alignItems: 'center' }}>
+              Quick:
+            </div>
+            {['👍', '👎', '❤️', '😊', '🙏', '✅'].map((emoji) => (
+              <button
+                key={emoji}
+                style={styles.quickReactionBtn}
+                onClick={() => handleQuickReaction(emoji)}
+                onMouseOver={(e) => {
+                  e.target.style.background = '#f3f4f6'
+                  e.target.style.transform = 'scale(1.1)'
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'white'
+                  e.target.style.transform = 'scale(1)'
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+
+          {/* File Preview */}
+          {selectedFile && (
+            <div style={styles.filePreview}>
+              <span style={{ fontSize: '1.2rem' }}>📎</span>
+              <span style={{ fontWeight: '500', color: '#0c4a6e' }}>{selectedFile.name}</span>
+              <button 
+                onClick={() => setSelectedFile(null)}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: '#ef4444', 
+                  cursor: 'pointer',
+                  fontSize: '1.1rem',
+                  marginLeft: 'auto'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          
+          <form onSubmit={sendMessage} style={styles.inputForm}>
+            <input
+              type="file"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+              id="file-input"
+              accept="image/*,.pdf,.doc,.docx,.txt"
+            />
+            
+            <label htmlFor="file-input" style={styles.fileButton}>
+              📎
+            </label>
+            
+            <textarea
+              ref={inputRef}
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder={
+                replyingTo 
+                  ? `Reply to ${replyingTo.senderName}...`
+                  : viewerType === 'admin' 
+                    ? 'Type your response...' 
+                    : 'Type your message...'
+              }
+              style={{
+                ...styles.textInput,
+                borderColor: newMessage.trim() ? (viewerType === 'admin' ? '#1e293b' : '#3b82f6') : '#d1d5db'
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  sendMessage(e)
+                }
+              }}
+            />
+            
+            <button 
+              type="submit" 
+              disabled={(!newMessage.trim() && !selectedFile) || uploading}
+              style={{
+                ...styles.sendButton,
+                opacity: (!newMessage.trim() && !selectedFile) || uploading ? 0.5 : 1,
+                cursor: (!newMessage.trim() && !selectedFile) || uploading ? 'not-allowed' : 'pointer',
+                background: uploading ? '#94a3b8' : styles.sendButton.background
+              }}
+            >
+              {uploading ? '⏳' : '📤'}
+              {uploading ? 'Sending...' : 'Send'}
+            </button>
+          </form>
+        </div>
+      )}
+      
       <style>{`
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
         
         @keyframes typing {
-          0%, 60%, 100% {
-            transform: translateY(0);
-            opacity: 0.7;
-          }
-          30% {
-            transform: translateY(-8px);
-            opacity: 1;
-          }
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-10px); }
         }
       `}</style>
     </div>
