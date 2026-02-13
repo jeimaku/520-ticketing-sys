@@ -13,7 +13,7 @@ export const AUTOMATION_CONFIG = {
 export const AUTOMATION_MESSAGES = {
   // Welcome message that appears after delay
   welcome: (companyName, ticketId) => 
-    `Hello there, ${companyName || 'Client'} client! Thank you for your patience. All our support agents are currently assisting other clients, but your ticket #${ticketId.slice(0, 8)} is in our queue. While you wait, would you like to get immediate details about your submission or try our quick-resolve tools? Please select an option below.`,
+    `Hello there, ${companyName || 'Client'} client! Thank you for your patience. Your ticket #${ticketId.slice(0, 8)} is in our queue. While you wait, would you like to get immediate details about your submission or try our quick-resolve tools? Please select an option below.`,
 
   // Quick action options for clients
   quickActions: [
