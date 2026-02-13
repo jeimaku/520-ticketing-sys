@@ -117,18 +117,6 @@ const SimpleHomePageGuard = ({ children }) => {
               🌐 <strong>Website:</strong> <a href="https://www.520itservices.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none' }}>www.520itservices.com</a>
             </div>
           </div>
-          
-          <a 
-            href="/admin"
-            style={{ 
-              color: '#6366f1',
-              textDecoration: 'none',
-              fontSize: '0.8rem',
-              fontWeight: '500'
-            }}
-          >
-            System Administrator →
-          </a>
         </div>
       </div>
     )

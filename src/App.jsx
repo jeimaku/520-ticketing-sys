@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import CompanyPage from './pages/CompanyPage';
 import TrackingPage from './pages/TrackingPage';
 import AdminDashboard from './pages/AdminDashboard_Modular';
@@ -7,14 +7,23 @@ import HomePage from './pages/HomePage';
 import HomePageGuard from './components/HomePageGuard';
 import './index.css';
 
+// 🔐 SECURITY: This is your Secret Admin URL.
+// Only people who know this exact link (or the magic unlock key) can find the login page.
+export const ADMIN_PATH = "/sys-admin-secure-access-520";
+
 function App() {
   return (
     <Router>
       <div className="App">
         <Routes>
+          {/* Public Routes */}
           <Route path="/portal/:portalCode" element={<CompanyPage />} />
           <Route path="/track/:token" element={<TrackingPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          
+          {/* 🔐 The Secret Admin Route (Replaces standard /admin) */}
+          <Route path={ADMIN_PATH} element={<AdminDashboard />} />
+          
+          {/* Root Route - Protected by Guard */}
           <Route 
             path="/" 
             element={
@@ -56,16 +65,6 @@ const AccessDeniedPage = () => (
       <p style={{ color: '#7f1d1d', marginBottom: '2rem' }}>
         The page you're looking for doesn't exist or access is restricted.
       </p>
-      {/* <a 
-        href="/admin"
-        style={{ 
-          color: '#4f46e5',
-          textDecoration: 'none',
-          fontWeight: '600'
-        }}
-      >
-        Admin Login →
-      </a> */}
     </div>
   </div>
 )
