@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { getTheme } from '../styles/themes' // Import this to get icons/colors dynamically
+import { getTheme } from '../styles/themes'
 import '../styles/HomePage.css'
+
+// CHECK THE FLAG
+const IS_ADMIN_BUILD = import.meta.env.VITE_ENABLE_ADMIN === 'true'
 
 const HomePage = () => {
   const [showCompanies, setShowCompanies] = useState(false)
   const [isCheckingAccess, setIsCheckingAccess] = useState(true)
-  const [adminAccess, setAdminAccess] = useState(false)
-  
-  // NEW: State to store companies fetched from DB
   const [companies, setCompanies] = useState([])
 
   useEffect(() => {
     checkHomepageAccess()
   }, [])
 
-  // NEW: Fetch companies when access is granted
   useEffect(() => {
     if (showCompanies) {
       fetchCompanies()
@@ -25,7 +24,6 @@ const HomePage = () => {
 
   const fetchCompanies = async () => {
     try {
-      // Fetch id, name, slug, and the new portal_code
       const { data, error } = await supabase
         .from('companies')
         .select('*')
@@ -40,24 +38,23 @@ const HomePage = () => {
 
   const checkHomepageAccess = async () => {
     try {
-      // (Your existing access logic remains exactly the same)
-      const adminSession = localStorage.getItem('adminSession')
-      if (adminSession) {
-        setAdminAccess(true)
-        setShowCompanies(true)
-        setIsCheckingAccess(false)
-        return
+      // SECURITY CHECK:
+      // If this is the CLIENT build, we strictly IGNORE admin sessions.
+      // This effectively "removes" the admin capability from this version of the site.
+      if (IS_ADMIN_BUILD) {
+        const adminSession = localStorage.getItem('adminSession')
+        const urlParams = new URLSearchParams(window.location.search)
+        const adminKey = urlParams.get('admin_access')
+
+        if (adminSession || adminKey === 'fivetwenty_admin_2024') {
+          setShowCompanies(true)
+          setIsCheckingAccess(false)
+          return
+        }
       }
 
+      // Standard Client Access Checks (Referrer / Session)
       if (document.referrer.includes('/company/') || document.referrer.includes('/portal/')) {
-        setShowCompanies(true)
-        setIsCheckingAccess(false)
-        return
-      }
-
-      const urlParams = new URLSearchParams(window.location.search)
-      const adminKey = urlParams.get('admin_access')
-      if (adminKey === 'fivetwenty_admin_2024') {
         setShowCompanies(true)
         setIsCheckingAccess(false)
         return
@@ -66,12 +63,14 @@ const HomePage = () => {
       const hasCompanySession = Object.keys(sessionStorage).some(key => 
         key.startsWith('company_access_')
       )
+      
       if (hasCompanySession) {
         setShowCompanies(true)
         setIsCheckingAccess(false)
         return
       }
 
+      // Default: Access Denied
       setShowCompanies(false)
       setIsCheckingAccess(false)
 
@@ -82,10 +81,8 @@ const HomePage = () => {
     }
   }
 
-  // Helper to get theme data (icon, description) based on slug
   const getCompanyDetails = (slug) => {
     const theme = getTheme(slug)
-    // You can customize descriptions here or add them to your DB later
     const descriptions = {
       'stahl-materials': "Industrial solutions and materials",
       'paysera': "Digital payment solutions",
@@ -128,47 +125,29 @@ const HomePage = () => {
           </div>
 
           {showCompanies ? (
-            <>
-              <div className="portals-section">
-                <h2 className="section-title">Select Your Organization</h2>
-                
-                {/* DYNAMIC GRID: Replaces the hardcoded list */}
-                <div className="company-grid">
-                  {companies.map((company) => {
-                    const details = getCompanyDetails(company.slug)
-                    return (
-                      <CompanyCard 
-                        key={company.id}
-                        icon={details.icon}
-                        title={company.name}
-                        description={details.description}
-                        // KEY CHANGE: Link uses portal_code
-                        link={`/portal/${company.portal_code || 'invalid'}`} 
-                      />
-                    )
-                  })}
-                  
-                  {companies.length === 0 && (
-                    <p style={{ textAlign: 'center', color: '#64748b', gridColumn: '1/-1' }}>
-                      No company portals found.
-                    </p>
-                  )}
-                </div>
+            <div className="portals-section">
+              <h2 className="section-title">Select Your Organization</h2>
+              <div className="company-grid">
+                {companies.map((company) => {
+                  const details = getCompanyDetails(company.slug)
+                  return (
+                    <CompanyCard 
+                      key={company.id}
+                      icon={details.icon}
+                      title={company.name}
+                      description={details.description}
+                      link={`/portal/${company.portal_code || 'invalid'}`} 
+                    />
+                  )
+                })}
+                {companies.length === 0 && (
+                  <p style={{ textAlign: 'center', color: '#64748b', gridColumn: '1/-1' }}>
+                    No company portals found.
+                  </p>
+                )}
               </div>
-
-              <div className="admin-section">
-                <Link to="/admin" className="admin-link">🔧 Admin Dashboard</Link>
-              </div>
-
-              {adminAccess && (
-                <div style={{ textAlign: 'center', marginTop: '1rem', padding: '0.5rem', background: '#f0fdf4', borderRadius: '0.5rem', border: '1px solid #bbf7d0' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#166534' }}>👑 Admin Access Active</span>
-                </div>
-              )}
-            </>
+            </div>
           ) : (
-             /* ... (Your existing "Access Denied" / Info view remains unchanged) ... */
-             /* Copy/Paste the "Information message" block from your original file here */
              <div className="portals-section">
                 <div style={{ textAlign: 'center', background: 'white', padding: '3rem 2rem', borderRadius: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', maxWidth: '600px', margin: '0 auto' }}>
                   <p style={{ color: '#64748b', marginBottom: '2rem', lineHeight: '1.6' }}>
@@ -181,12 +160,15 @@ const HomePage = () => {
                       📞 <strong>Phone:</strong> <a href="tel:+639333045384">+63 933 304 5384</a>
                     </div>
                   </div>
-                  <details style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                    <summary style={{ cursor: 'pointer' }}>System Administrator</summary>
-                    <div style={{ marginTop: '0.5rem' }}>
-                      <Link to="/admin" style={{ color: '#6366f1', textDecoration: 'none' }}>Admin Login</Link>
+                  
+                  {/* VISUAL INDICATOR: Only show this "Admin Login" text if we are on the Admin Domain */}
+                  {IS_ADMIN_BUILD && (
+                    <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
+                       <Link to="/admin" style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'none' }}>
+                         System Administrator Login
+                       </Link>
                     </div>
-                  </details>
+                  )}
                 </div>
               </div>
           )}
@@ -199,26 +181,20 @@ const HomePage = () => {
   )
 }
 
-// Updated CompanyCard to use 'link' instead of 'slug'
 const CompanyCard = ({ icon, title, description, link }) => (
   <div className="fade-in-up">
     <Link to={link} className="company-card-link">
       <div className="company-card">
-        
-        {/* CHECK IF ICON IS STRING (Emoji) OR PATH (Image) */}
         <div className="card-icon">
           {typeof icon === 'string' && icon.startsWith('/') ? (
              <img src={icon} alt={title} style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
           ) : (
-             icon // Fallback for emojis if any remain
+             icon 
           )}
         </div>
-
         <h3 className="card-title">{title}</h3>
         <p className="card-desc">{description}</p>
-        <button className="card-btn">
-          Access Portal →
-        </button>
+        <button className="card-btn">Access Portal →</button>
       </div>
     </Link>
   </div>
