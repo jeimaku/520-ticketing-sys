@@ -72,8 +72,8 @@ const CompanyPage = () => {
             src={theme.logo} 
             alt={`${theme.name} logo`} 
             style={{ 
-              maxWidth: '300%', 
-              maxHeight: '450px', // Limits height so it doesn't look too huge
+              maxWidth: '150%', 
+              maxHeight: '350px', // Limits height so it doesn't look too huge
               objectFit: 'contain',
               filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))' // Adds a nice shadow
             }} 
