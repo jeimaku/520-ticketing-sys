@@ -39,7 +39,7 @@ export const useNotifications = (isAuthenticated) => {
           // Play Sound (Optional)
           try {
             const audio = new Audio("https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3")
-            audio.volume = 0.5
+            audio.volume = 2.0
             audio.play().catch(e => console.error("Audio blocked", e))
           } catch (e) {}
         }

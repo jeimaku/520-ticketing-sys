@@ -6,7 +6,9 @@ const NotificationBell = ({
   newTicketCount, 
   markAsRead, 
   markAllAsRead, 
-  clearNotifications 
+  clearNotifications,
+  isMuted,       // NEW: Prop to check if sound is muted
+  toggleMute     // NEW: Function to toggle the sound state
 }) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -23,7 +25,7 @@ const NotificationBell = ({
 
   return (
     <div className="notification-wrapper">
-      {/* Bell Icon */}
+      {/* Bell Icon (Keep your existing SVG here) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`notification-btn ${isOpen ? 'active' : ''}`}
@@ -44,7 +46,7 @@ const NotificationBell = ({
           />
         </svg>
         
-        {newTicketCount > 0 && (
+          {newTicketCount > 0 && (
           <span className="notification-badge">
             {newTicketCount > 9 ? '9+' : newTicketCount}
           </span>
@@ -71,6 +73,17 @@ const NotificationBell = ({
                 <span className="notif-count-pill">{newTicketCount} New</span>
               )}
             </div>
+
+            <div className="header-actions">
+              {/* NEW: Sound Toggle Button */}
+              <button 
+                onClick={toggleMute} 
+                className="action-link"
+                style={{ marginRight: '8px', cursor: 'pointer' }}
+                title={isMuted ? "Unmute notifications" : "Mute notifications"}
+              >
+                {isMuted ? '🔇 Muted' : '🔊 Sound On'}
+              </button>
             
             {notifications.length > 0 && (
               <div className="header-actions">
@@ -82,6 +95,7 @@ const NotificationBell = ({
                 </button>
               </div>
             )}
+          </div>
           </div>
 
           {/* Scrollable List */}
