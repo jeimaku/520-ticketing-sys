@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase' // Corrected import based on your directory structure
 import ExportControls from '../components/ExportControls'
 import '../styles/TicketsPage.css'
 
@@ -11,11 +12,56 @@ const TicketsPage = ({
   updateTicketStatus, 
   setSelectedTicket 
 }) => {
+  // 1. Local state to manage live updates alongside parent props
+  const [liveTickets, setLiveTickets] = useState(tickets);
+
+  // 2. Sync local state if the parent component passes down new initial tickets
+  useEffect(() => {
+    setLiveTickets(tickets);
+  }, [tickets]);
+
+  // 3. Real-time Supabase listener and Custom Notification Sound
+  useEffect(() => {
+    // Initialize the audio object. 
+    // The path starts with '/' which automatically looks in your 'public' folder.
+    const notificationSound = new Audio('/alert.mp3');
+    
+    // Explicitly enforce maximum volume (1.0 is the max, 0.0 is muted)
+    notificationSound.volume = 1.0;
+
+    const subscription = supabase
+      .channel('public:tickets')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'tickets' },
+        (payload) => {
+          // Play your custom notification sound
+          notificationSound.play().catch((error) => {
+            console.warn("Browser autoplay policy blocked the sound. The user needs to interact with the document first.", error);
+          });
+
+          // Instantly add the new ticket to the top of the table
+          setLiveTickets((currentTickets) => {
+            // Prevent duplicate entries
+            if (currentTickets.some(t => t.id === payload.new.id)) return currentTickets;
+            return [payload.new, ...currentTickets];
+          });
+        }
+      )
+      .subscribe();
+
+    // Cleanup the subscription when the component unmounts
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
   return (
     <div className="tickets-page">
       <div className="tickets-header">
         <h1 className="tickets-title">Ticket Overview</h1>
-        <span className="tickets-count">Showing {tickets.length} tickets</span>
+        {/* Updated to reflect the live count */}
+        <span className="tickets-count">Showing {liveTickets.length} tickets</span>
       </div>
 
       {/* Filters & Controls */}
@@ -23,7 +69,7 @@ const TicketsPage = ({
         <div className="tickets-filter-header">
           <h2 className="tickets-filter-title">Search & Filter</h2>
           <ExportControls 
-            tickets={tickets} 
+            tickets={liveTickets} // Exporting the live data
             companies={companies} 
             filters={filters}
           />
@@ -92,14 +138,15 @@ const TicketsPage = ({
               </tr>
             </thead>
             <tbody>
-              {tickets.length === 0 ? (
+              {/* Updated to map over liveTickets instead of tickets prop */}
+              {liveTickets.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="tickets-empty-state">
                     No tickets found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                tickets.map((ticket) => (
+                liveTickets.map((ticket) => (
                   <tr key={ticket.id}>
                     <td className="ticket-date">
                       {new Date(ticket.created_at).toLocaleDateString()}
