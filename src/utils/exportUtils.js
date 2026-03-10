@@ -10,7 +10,7 @@ export const exportToCSV = (tickets, companies, filters = {}) => {
 
   // 2. Format Data
   const exportData = tickets.map(ticket => {
-    // Handle case where company lookup might fail
+    // Handle case where company lookup might fail or data is joined via Supabase relation
     const company = companies.find(c => c.id === ticket.company_id)
     const companyName = company ? company.name : (ticket.companies?.name || 'Unknown')
     
@@ -26,8 +26,8 @@ export const exportToCSV = (tickets, companies, filters = {}) => {
       'Location': ticket.location || '',
       'Issue Description': (ticket.issue_description || '').replace(/(\r\n|\n|\r)/gm, " "), // Remove newlines for CSV safety
       'Status': statusText,
-      'Created Date': new Date(ticket.created_at).toLocaleDateString(),
-      'Created Time': new Date(ticket.created_at).toLocaleTimeString(),
+      'Created Date': ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : '',
+      'Created Time': ticket.created_at ? new Date(ticket.created_at).toLocaleTimeString() : '',
       'Tracking Token': ticket.tracking_token || ''
     }
   })
@@ -38,15 +38,15 @@ export const exportToCSV = (tickets, companies, filters = {}) => {
     headers.join(','),
     ...exportData.map(row => 
       headers.map(header => {
-        let value = row[header]
+        const rawValue = row[header];
+        // Safely convert to string to prevent .includes() from crashing on numbers/booleans
+        let stringValue = rawValue !== null && rawValue !== undefined ? String(rawValue) : '';
+        
         // Escape quotes and commas for CSV format
-        if (typeof value === 'string') {
-          // Wrap in quotes if it contains comma or quote
-          if (value.includes(',') || value.includes('"')) {
-            value = `"${value.replace(/"/g, '""')}"`
-          }
+        if (stringValue.includes(',') || stringValue.includes('"')) {
+          stringValue = `"${stringValue.replace(/"/g, '""')}"`;
         }
-        return value
+        return stringValue;
       }).join(',')
     )
   ].join('\n')
@@ -78,8 +78,8 @@ export const exportToExcel = (tickets, companies, filters = {}) => {
       'Location': ticket.location,
       'Issue Description': ticket.issue_description,
       'Status': statusText,
-      'Created Date': new Date(ticket.created_at).toLocaleDateString(),
-      'Created Time': new Date(ticket.created_at).toLocaleTimeString(),
+      'Created Date': ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : '',
+      'Created Time': ticket.created_at ? new Date(ticket.created_at).toLocaleTimeString() : '',
       'Tracking Token': ticket.tracking_token
     }
   })

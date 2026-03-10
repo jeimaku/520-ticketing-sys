@@ -32,9 +32,11 @@ const ExportControls = ({ tickets, companies, filters }) => {
       await new Promise(resolve => setTimeout(resolve, 500))
 
       if (format === 'csv') {
-        exportToCSV(tickets, companies, filters)
+        // Added await in case your utils are asynchronous
+        await exportToCSV(tickets, companies, filters)
       } else if (format === 'excel') {
-        exportToExcel(tickets, companies, filters)
+        // Added await in case your utils are asynchronous
+        await exportToExcel(tickets, companies, filters)
       }
       console.log('Export success')
     } catch (error) {
