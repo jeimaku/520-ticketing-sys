@@ -18,9 +18,9 @@ const AdminDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentAdmin, setCurrentAdmin] = useState(null)
   const [selectedTicket, setSelectedTicket] = useState(null)
-  const [activeTab, setActiveTab] = useState('tickets') // Navigation state
+  const [activeTab, setActiveTab] = useState('tickets') 
   
-  // ADDED: Global Audio and Session States
+  // Global Audio and Session States
   const [isAudioEnabled, setIsAudioEnabled] = useState(false)
   const audioRef = useRef(null)
 
@@ -42,15 +42,17 @@ const AdminDashboard = () => {
     clearNotifications
   } = useNotifications(isAuthenticated)
 
-  // 1. Initialize Audio Object once
+  // --- DEBUG LOGGING ---
+  useEffect(() => {
+    console.log("🛠️ SYSTEM STATE CHECK -> Authenticated:", isAuthenticated, "| Audio Enabled:", isAudioEnabled);
+  }, [isAuthenticated, isAudioEnabled])
+  // ---------------------
+
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio('/alert.mp3');
       audioRef.current.volume = 1.0;
     }
-  }, [])
-
-  useEffect(() => {
     checkAuthStatus()
   }, [])
 
@@ -66,9 +68,7 @@ const AdminDashboard = () => {
     }
   }, [newTicketCount])
 
-  // 2. Global Supabase Listener for Audio Alerts
   useEffect(() => {
-    // Only start listening if they are logged in
     if (!isAuthenticated) return;
 
     const subscription = supabase
@@ -77,13 +77,11 @@ const AdminDashboard = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'tickets' },
         (payload) => {
-          // Play the sound globally if session is enabled
           if (audioRef.current && isAudioEnabled) {
             audioRef.current.play().catch((error) => {
               console.warn("Audio blocked by browser:", error);
             });
           }
-          // Fetch data so all tabs (Tickets, Analytics, etc) update instantly
           fetchData();
         }
       )
@@ -100,6 +98,7 @@ const AdminDashboard = () => {
       const session = JSON.parse(adminSession)
       setCurrentAdmin(session)
       setIsAuthenticated(true)
+      // Note: isAudioEnabled remains false here, triggering the overlay
     }
     setLoading(false)
   }
@@ -107,7 +106,6 @@ const AdminDashboard = () => {
   const handleLoginSuccess = (admin) => {
     setCurrentAdmin(admin)
     setIsAuthenticated(true)
-    // When they log in actively (clicking a button), the browser unlocks audio automatically
     handleEnableAudio() 
   }
 
@@ -115,15 +113,16 @@ const AdminDashboard = () => {
     localStorage.removeItem('adminSession')
     setIsAuthenticated(false)
     setCurrentAdmin(null)
-    setIsAudioEnabled(false) // Reset audio session on logout
+    setIsAudioEnabled(false) 
   }
 
-  // ADDED: Function to unlock audio context after a page refresh
   const handleEnableAudio = () => {
+    console.log("🔊 Unlocking Audio Context...");
     if (audioRef.current) {
       audioRef.current.play().then(() => {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
+        console.log("✅ Audio successfully unlocked!");
       }).catch(err => console.warn("Audio unlock issue:", err));
     }
     setIsAudioEnabled(true);
@@ -198,17 +197,17 @@ const AdminDashboard = () => {
 
   return (
     <>
-      {/* ADDED: Global Audio Enable Overlay - Only shows if logged in but audio is not unlocked yet (e.g., after a hard refresh) */}
+      {/* Session Resume Overlay */}
       {isAuthenticated && !isAudioEnabled && (
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backgroundColor: 'rgba(15, 23, 42, 0.95)', // Made slightly darker to ensure it's visible
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          zIndex: 99999,
-          backdropFilter: 'blur(4px)'
+          zIndex: 9999999, // Extreme z-index
+          backdropFilter: 'blur(8px)'
         }}>
           <div style={{
             backgroundColor: '#fff',
@@ -216,7 +215,7 @@ const AdminDashboard = () => {
             borderRadius: '12px',
             textAlign: 'center',
             maxWidth: '450px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
           }}>
             <h2 style={{ marginTop: 0, color: '#1e293b', fontSize: '1.5rem' }}>Resume Dashboard Session</h2>
             <p style={{ color: '#475569', marginBottom: '24px', lineHeight: '1.6' }}>
