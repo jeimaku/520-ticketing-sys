@@ -1,21 +1,78 @@
-// src/components/MessageRenderer.jsx
 import React, { useState } from 'react'
 import { parseStructuredMessage, hasStructuredFormatting } from './AutomationMessages'
 
-const MessageRenderer = ({ message, senderType, senderName }) => {
+const MessageRenderer = ({ message, senderType, senderName, attachmentUrl }) => {
   // Check if this is an automated message that needs special formatting
   const isAutomatedMessage = senderName === 'Automated Assistant'
   const needsFormatting = hasStructuredFormatting(message)
 
+  // Helper to determine if attachment is an image
+  const isImage = (url) => {
+    return url && url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i);
+  };
+
+  const renderAttachment = () => {
+    if (!attachmentUrl) return null;
+
+    if (isImage(attachmentUrl)) {
+      return (
+        <div style={{ marginTop: '0.75rem', borderRadius: '0.5rem', overflow: 'hidden' }}>
+          <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
+            <img 
+              src={attachmentUrl} 
+              alt="Attachment" 
+              style={{ 
+                maxWidth: '100%', 
+                maxHeight: '300px', 
+                display: 'block',
+                borderRadius: '0.5rem',
+                border: '1px solid rgba(0,0,0,0.1)'
+              }} 
+            />
+          </a>
+        </div>
+      );
+    }
+
+    return (
+      <a 
+        href={attachmentUrl} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginTop: '0.75rem',
+          padding: '0.6rem',
+          background: 'rgba(0,0,0,0.05)',
+          borderRadius: '0.5rem',
+          textDecoration: 'none',
+          color: 'inherit',
+          fontSize: '0.85rem',
+          border: '1px solid rgba(0,0,0,0.1)'
+        }}
+      >
+        <span>📎</span>
+        <span style={{ textDecoration: 'underline' }}>View Attachment</span>
+      </a>
+    );
+  };
+
   if (!isAutomatedMessage || !needsFormatting) {
-    // Regular message - display as plain text
+    // Regular message - display as plain text + attachment
     return (
       <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
-        {message}
+        {/* Only show message div if there is actual text content */}
+        {message && message.trim() !== "" && (
+          <div style={{ marginBottom: attachmentUrl ? '0.5rem' : '0' }}>
+            {message}
+          </div>
+        )}
+        {renderAttachment()}
       </div>
     )
   }
-
   // Parse and render structured message
   const parts = parseStructuredMessage(message)
   
@@ -46,6 +103,7 @@ const MessageRenderer = ({ message, senderType, senderName }) => {
             return null
         }
       })}
+      {renderAttachment()}
     </div>
   )
 }
@@ -122,10 +180,10 @@ const ReplyPreview = ({ replyTo }) => {
   )
 }
 
-// REPLACE THE MessageBubble COMPONENT WITH THIS:
 export const MessageBubble = ({ 
   message, 
   messageId,
+  attachmentUrl, // Prop explicitly received from TicketThread
   senderType, 
   senderName, 
   timestamp, 
@@ -167,7 +225,7 @@ export const MessageBubble = ({
     flexShrink: 0,
     border: '2px solid white',
     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    cursor: 'default' // Changed from pointer since it doesn't do much now
+    cursor: 'default'
   }
 
   const bubbleStyle = {
@@ -196,7 +254,7 @@ export const MessageBubble = ({
       : !isFromViewer 
         ? '1px solid #e2e8f0' 
         : 'none',
-    cursor: 'pointer', // Indicates it is clickable
+    cursor: 'pointer',
     transition: 'all 0.2s'
   }
 
@@ -208,13 +266,12 @@ export const MessageBubble = ({
     position: 'relative'
   }
 
-   const senderInfoStyle = {
+  const senderInfoStyle = {
     fontSize: '0.75rem',
     fontWeight: '600',
-    // CHANGE THIS SECTION:
     color: isAutomated 
       ? '#059669'
-      : '#64748b', // Always use dark gray, even for "isFromViewer"
+      : '#64748b',
     marginBottom: '0.25rem',
     display: 'flex',
     alignItems: 'center',
@@ -232,10 +289,9 @@ export const MessageBubble = ({
     display: 'flex',
     alignItems: 'center',
     gap: '0.25rem',
-    pointerEvents: 'none' // Prevent clicking timestamp separately
+    pointerEvents: 'none'
   }
 
-  // UPDATED: Simple time formatter (from previous step)
   const formatSimpleTime = (timestamp) => {
     if (!timestamp) return ''
     const date = new Date(timestamp)
@@ -260,7 +316,11 @@ export const MessageBubble = ({
   }
 
   const handleReplyClick = (e) => {
-    // Prevent reply if the user is just trying to select text
+    // Stop propagation if the user clicked an image/link inside the bubble
+    if (e.target.tagName === 'IMG' || e.target.tagName === 'A' || e.target.tagName === 'SPAN') {
+        if (e.target.closest('a')) return; 
+    }
+
     const selection = window.getSelection()
     if (selection.toString().length > 0) return
 
@@ -276,7 +336,6 @@ export const MessageBubble = ({
 
   return (
     <div style={messageContainerStyle}>
-      {/* Avatar */}
       <div style={avatarStyle}>
         {avatar.initials}
         {senderType === 'admin' && (
@@ -293,7 +352,6 @@ export const MessageBubble = ({
         )}
       </div>
 
-      {/* Message Content */}
       <div style={messageInfoStyle}>
         {showSender && (
           <div style={senderInfoStyle}>
@@ -301,15 +359,11 @@ export const MessageBubble = ({
             <span style={{ 
                 opacity: 0.8, 
                 fontSize: '0.65rem',
-                // CHANGE BACKGROUND: Always use light gray for non-automated messages
                 background: isAutomated
                     ? 'rgba(16, 185, 129, 0.15)'
                     : '#f1f5f9',
-                
                 padding: '0.125rem 0.375rem',
                 borderRadius: '999px',
-                
-                // CHANGE TEXT COLOR: Always use dark slate
                 color: isAutomated
                     ? '#059669'
                     : '#64748b'
@@ -319,7 +373,6 @@ export const MessageBubble = ({
           </div>
         )}
         
-        {/* CLICKABLE BUBBLE: Triggers reply on click */}
         <div 
           style={bubbleStyle}
           onClick={handleReplyClick}
@@ -331,13 +384,13 @@ export const MessageBubble = ({
              e.currentTarget.style.filter = 'none'
           }}
         >
-          {/* Reply preview if this is a reply */}
           <ReplyPreview replyTo={replyTo} />
           
           <MessageRenderer 
             message={message}
             senderType={senderType}
             senderName={senderName}
+            attachmentUrl={attachmentUrl} // Passing the URL to the renderer
           />
           
           <div style={timestampStyle}>
