@@ -33,8 +33,10 @@ export const useNotifications = (isAuthenticated) => {
   useEffect(() => {
     if (!isAuthenticated) return
 
-    // 1. Setup the channel
-    const channel = supabase
+    // -----------------------------------------------------
+    // 1. Setup the NEW TICKETS channel
+    // -----------------------------------------------------
+    const ticketChannel = supabase
       .channel('realtime-tickets')
       .on(
         'postgres_changes',
@@ -44,10 +46,8 @@ export const useNotifications = (isAuthenticated) => {
           table: 'tickets',
         },
         (payload) => {
-          console.log('Realtime Update Received:', payload) // Debug log
           const newTicket = payload.new
           
-          // Create notification object
           const newNotif = {
             id: newTicket.id, 
             title: 'New Ticket Received',
@@ -57,33 +57,74 @@ export const useNotifications = (isAuthenticated) => {
             ticketId: newTicket.id
           }
 
-          // Update State
           setNotifications((prev) => [newNotif, ...prev])
           setNewTicketCount((prev) => prev + 1)
           
-          // Play Custom Sound Logic
           if (!isMutedRef.current) {
             try {
-              const audio = new Audio("/sounds/ticket-alert.mp3") // Path to Vite public folder
+              const audio = new Audio("/sounds/ticket-alert.mp3") 
               audio.volume = volumeRef.current
-              audio.play().catch(e => console.error("Audio playback blocked by browser", e))
+              audio.play().catch(e => console.error("Ticket audio blocked", e))
             } catch (e) {
               console.error("Audio initialization error", e)
             }
           }
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Listening for new tickets...')
-        }
-      })
+      .subscribe()
 
-    // 2. Cleanup
+    // -----------------------------------------------------
+    // 2. Setup the NEW MESSAGES channel
+    // -----------------------------------------------------
+    const messageChannel = supabase
+      .channel('realtime-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ticket_messages',
+        },
+        (payload) => {
+          const newMessage = payload.new
+          
+          // STRICT CHECK: Only trigger if the sender is the user/client
+          // (Adjust 'sender_type' if your database column is named differently)
+          if (newMessage.sender_type !== 'admin') {
+            
+            const newNotif = {
+              id: newMessage.id,
+              title: 'New Client Message',
+              message: `A client sent a message in ticket #${newMessage.ticket_id?.substring(0,8)}...`,
+              timestamp: new Date(),
+              read: false,
+              ticketId: newMessage.ticket_id
+            }
+
+            setNotifications((prev) => [newNotif, ...prev])
+            setNewTicketCount((prev) => prev + 1)
+            
+            // Play the unique message alert sound
+            if (!isMutedRef.current) {
+              try {
+                const messageAudio = new Audio("/sounds/message-alert.mp3") 
+                messageAudio.volume = volumeRef.current
+                messageAudio.play().catch(e => console.error("Message audio blocked", e))
+              } catch (e) {
+                console.error("Message audio initialization error", e)
+              }
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    // 3. Cleanup both channels on unmount
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(ticketChannel)
+      supabase.removeChannel(messageChannel)
     }
-  }, [isAuthenticated]) // Only re-run if authentication status changes
+  }, [isAuthenticated]) 
 
   const markAsRead = (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
