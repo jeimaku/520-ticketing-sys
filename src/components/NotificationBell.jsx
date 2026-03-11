@@ -8,7 +8,9 @@ const NotificationBell = ({
   markAllAsRead, 
   clearNotifications,
   isMuted,       // NEW: Prop to check if sound is muted
-  toggleMute     // NEW: Function to toggle the sound state
+  toggleMute,    // NEW: Function to toggle the sound state
+  volume,        // NEW: Prop for current volume level
+  setVolume      // NEW: Function to adjust volume
 }) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -75,27 +77,39 @@ const NotificationBell = ({
             </div>
 
             <div className="header-actions">
-              {/* NEW: Sound Toggle Button */}
-              <button 
-                onClick={toggleMute} 
-                className="action-link"
-                style={{ marginRight: '8px', cursor: 'pointer' }}
-                title={isMuted ? "Unmute notifications" : "Mute notifications"}
-              >
-                {isMuted ? '🔇 Muted' : '🔊 Sound On'}
-              </button>
-            
-            {notifications.length > 0 && (
-              <div className="header-actions">
-                <button onClick={markAllAsRead} className="action-link action-mark">
-                  Mark all read
-                </button>
-                <button onClick={clearNotifications} className="action-link action-clear">
-                  Clear
-                </button>
-              </div>
-            )}
+              {notifications.length > 0 && (
+                <>
+                  <button onClick={markAllAsRead} className="action-link action-mark">
+                    Mark all read
+                  </button>
+                  <button onClick={clearNotifications} className="action-link action-clear">
+                    Clear
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+
+          {/* NEW: Dedicated Sound & Volume Controls Panel */}
+          <div className="sound-controls-panel">
+            <button 
+              onClick={toggleMute} 
+              className={`mute-btn ${isMuted ? 'muted' : ''}`}
+              title={isMuted ? "Unmute Notifications" : "Mute Notifications"}
+            >
+              {isMuted ? '🔇' : '🔊'}
+            </button>
+            <input 
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.05" 
+              value={volume}
+              onChange={(e) => setVolume(parseFloat(e.target.value))}
+              disabled={isMuted}
+              className="volume-slider"
+              title="Adjust Alert Volume"
+            />
           </div>
 
           {/* Scrollable List */}

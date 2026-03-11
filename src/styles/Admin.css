@@ -88,10 +88,26 @@
   letter-spacing: 1px;
 }
 
-.nav-actions {
+/* FIXED REORDERING: Positions Profile, Bell, and Logout correctly */
+.nav-actions, .navbar-actions {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+}
+
+.nav-actions > .user-info, 
+.navbar-actions > .admin-profile { 
+  order: 1; 
+}
+
+.nav-actions > .notification-wrapper, 
+.navbar-actions > .notification-wrapper { 
+  order: 2; 
+}
+
+.nav-actions > .logout-btn, 
+.navbar-actions > .logout-btn { 
+  order: 3; 
 }
 
 .user-info {
@@ -701,17 +717,17 @@
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-/* Dropdown Panel */
+/* Dropdown Panel - FIXED OPACITY AND Z-INDEX */
 .notification-dropdown {
   position: absolute;
   right: -10px;
   top: 120%;
   width: 380px;
-  background: white;
+  background: #ffffff !important; 
   border-radius: 1rem;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   border: 1px solid #e2e8f0;
-  z-index: 1000;
+  z-index: 99999 !important; 
   animation: slideDown 0.2s ease-out;
   overflow: hidden;
 }
@@ -1036,4 +1052,78 @@
   .nav-text {
     display: block;
   }
+}
+
+/* --- Notification Sound Controls --- */
+.sound-controls-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mute-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.mute-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.mute-btn.muted {
+  opacity: 0.5;
+}
+
+.volume-slider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #cbd5e1;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ft-green);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.volume-slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.volume-slider:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+  background: #94a3b8;
+}
+
+/* --- NEW Ticket Count Styling --- */
+.tickets-count,
+.sidebar-ticket-count-text {
+  font-weight: bold !important;
+  font-style: italic !important;
 }

@@ -1,9 +1,34 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export const useNotifications = (isAuthenticated) => {
   const [notifications, setNotifications] = useState([])
   const [newTicketCount, setNewTicketCount] = useState(0)
+
+  // Sound and Volume States with LocalStorage persistence
+  const [isMuted, setIsMuted] = useState(() => localStorage.getItem('notificationMuted') === 'true')
+  const [volume, setVolume] = useState(() => {
+    const saved = localStorage.getItem('notificationVolume')
+    return saved !== null ? parseFloat(saved) : 0.5 // Default to 50% volume
+  })
+
+  // We use refs so the Supabase real-time listener always has the latest 
+  // values without needing to disconnect and reconnect on every volume tweak.
+  const isMutedRef = useRef(isMuted)
+  const volumeRef = useRef(volume)
+
+  // Sync state to refs and local storage
+  useEffect(() => {
+    isMutedRef.current = isMuted
+    localStorage.setItem('notificationMuted', isMuted)
+  }, [isMuted])
+
+  useEffect(() => {
+    volumeRef.current = volume
+    localStorage.setItem('notificationVolume', volume)
+  }, [volume])
+
+  const toggleMute = () => setIsMuted(prev => !prev)
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -24,7 +49,7 @@ export const useNotifications = (isAuthenticated) => {
           
           // Create notification object
           const newNotif = {
-            id: newTicket.id, // Use ticket ID or generate a random ID
+            id: newTicket.id, 
             title: 'New Ticket Received',
             message: `${newTicket.contact_name}: ${newTicket.issue_description?.substring(0, 30)}...`,
             timestamp: new Date(),
@@ -36,12 +61,16 @@ export const useNotifications = (isAuthenticated) => {
           setNotifications((prev) => [newNotif, ...prev])
           setNewTicketCount((prev) => prev + 1)
           
-          // Play Sound (Optional)
-          try {
-            const audio = new Audio("https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3")
-            audio.volume = 2.0
-            audio.play().catch(e => console.error("Audio blocked", e))
-          } catch (e) {}
+          // Play Custom Sound Logic
+          if (!isMutedRef.current) {
+            try {
+              const audio = new Audio("/sounds/ticket-alert.mp3") // Path to Vite public folder
+              audio.volume = volumeRef.current
+              audio.play().catch(e => console.error("Audio playback blocked by browser", e))
+            } catch (e) {
+              console.error("Audio initialization error", e)
+            }
+          }
         }
       )
       .subscribe((status) => {
@@ -54,7 +83,7 @@ export const useNotifications = (isAuthenticated) => {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated]) // Only re-run if authentication status changes
 
   const markAsRead = (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
@@ -76,6 +105,10 @@ export const useNotifications = (isAuthenticated) => {
     newTicketCount,
     markAsRead,
     markAllAsRead,
-    clearNotifications
+    clearNotifications,
+    isMuted,
+    toggleMute,
+    volume,
+    setVolume
   }
 }

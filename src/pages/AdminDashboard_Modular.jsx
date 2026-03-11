@@ -30,100 +30,91 @@ const AdminDashboard = () => {
     sortOrder: 'desc'
   })
 
+  // Destructure the original notification states + new volume/mute controls
   const {
     notifications,
     newTicketCount,
     markAsRead,
     markAllAsRead,
-    clearNotifications
+    clearNotifications,
+    isMuted,
+    toggleMute,
+    volume,
+    setVolume
   } = useNotifications(isAuthenticated)
 
   useEffect(() => {
-    checkAuthStatus()
+    // Check local storage instead of Supabase Auth
+    const checkSession = () => {
+      const savedSession = localStorage.getItem('adminSession')
+      if (savedSession) {
+        setIsAuthenticated(true)
+        setCurrentAdmin(JSON.parse(savedSession))
+      }
+      setLoading(false)
+    }
+
+    checkSession()
   }, [])
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchData()
+      fetchTickets()
+      fetchCompanies()
     }
   }, [isAuthenticated])
 
-  useEffect(() => {
-    if (newTicketCount > 0) {
-      fetchData()
+  const fetchTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      setTickets(data)
+    } catch (error) {
+      console.error('Error fetching tickets:', error)
     }
-  }, [newTicketCount])
-
-  const checkAuthStatus = () => {
-    const adminSession = localStorage.getItem('adminSession')
-    if (adminSession) {
-      const session = JSON.parse(adminSession)
-      setCurrentAdmin(session)
-      setIsAuthenticated(true)
-    }
-    setLoading(false)
   }
 
-  const handleLoginSuccess = (admin) => {
-    setCurrentAdmin(admin)
-    setIsAuthenticated(true)
+  const fetchCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name')
+      
+      if (error) throw error
+      setCompanies(data)
+    } catch (error) {
+      console.error('Error fetching companies:', error)
+    }
   }
 
   const handleLogout = () => {
+    // Clear custom auth session instead of Supabase Auth
     localStorage.removeItem('adminSession')
     setIsAuthenticated(false)
     setCurrentAdmin(null)
-  }
-
-  const fetchData = async () => {
-    try {
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from('tickets')
-        .select(`*, companies (name)`)
-        .order('created_at', { ascending: false })
-
-      if (ticketsError) throw ticketsError
-
-      const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
-        .select('*')
-
-      if (companiesError) throw companiesError
-
-      setTickets(ticketsData)
-      setCompanies(companiesData)
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    }
   }
 
   const updateTicketStatus = async (ticketId, newStatus) => {
     try {
       const { error } = await supabase
         .from('tickets')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ status: newStatus })
         .eq('id', ticketId)
 
       if (error) throw error
-      fetchData()
+
+      setTickets(tickets.map(ticket => 
+        ticket.id === ticketId ? { ...ticket, status: newStatus } : ticket
+      ))
     } catch (error) {
       console.error('Error updating ticket:', error)
-      alert('Error updating ticket status')
+      alert('Failed to update ticket status')
     }
-  }
-
-  const getFilteredAndSortedTickets = () => {
-    let filtered = tickets.filter(ticket => {
-      if (filters.company !== 'all' && ticket.company_id !== filters.company) return false
-      if (filters.status !== 'all' && ticket.status !== filters.status) return false
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase()
-        const text = [ticket.contact_name, ticket.issue_description, ticket.companies?.name].join(' ').toLowerCase()
-        if (!text.includes(searchTerm)) return false
-      }
-      return true
-    })
-    return filtered
   }
 
   const handleFilterChange = (key, value) => {
@@ -131,50 +122,84 @@ const AdminDashboard = () => {
   }
 
   const clearAllFilters = () => {
-    setFilters({ company: 'all', status: 'all', search: '', dateFrom: '', dateTo: '', sortBy: 'created_at', sortOrder: 'desc' })
+    setFilters({
+      company: 'all',
+      status: 'all',
+      search: '',
+      dateFrom: '',
+      dateTo: '',
+      sortBy: 'created_at',
+      sortOrder: 'desc'
+    })
   }
 
-  if (loading) return <div className="admin-container" style={{display:'flex', alignItems:'center', justifyContent:'center'}}>Loading...</div>
+  // Filter logic
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesCompany = filters.company === 'all' || ticket.company_id === filters.company
+    const matchesStatus = filters.status === 'all' || ticket.status === filters.status
+    const matchesSearch = filters.search === '' || 
+      ticket.contact_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      ticket.issue_description?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      ticket.id?.toLowerCase().includes(filters.search.toLowerCase())
+    
+    const ticketDate = new Date(ticket.created_at)
+    const matchesDateFrom = !filters.dateFrom || ticketDate >= new Date(filters.dateFrom)
+    const matchesDateTo = !filters.dateTo || ticketDate <= new Date(filters.dateTo)
+
+    return matchesCompany && matchesStatus && matchesSearch && matchesDateFrom && matchesDateTo
+  }).sort((a, b) => {
+    let comparison = 0
+    if (filters.sortBy === 'created_at') {
+      comparison = new Date(b.created_at) - new Date(a.created_at)
+    } else if (filters.sortBy === 'status') {
+      comparison = a.status.localeCompare(b.status)
+    }
+    return filters.sortOrder === 'asc' ? comparison * -1 : comparison
+  })
+
+  if (loading) {
+    return <div className="admin-loading">Loading dashboard...</div>
+  }
 
   if (!isAuthenticated) {
-    return <AdminLogin onLoginSuccess={handleLoginSuccess} />
+    return (
+      <AdminLogin 
+        onLoginSuccess={(session) => {
+          setIsAuthenticated(true)
+          setCurrentAdmin(session)
+        }} 
+      />
+    )
   }
-
-  const filteredTickets = getFilteredAndSortedTickets()
 
   return (
     <div className="admin-container">
-      {/* Navigation Bar */}
+      {/* Top Navbar */}
       <nav className="admin-navbar">
-        <div className="nav-brand">
-          <button 
-            onClick={() => setActiveTab('tickets')}
-            className="brand-button"
-            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className="brand-text-main">FIVE TWENTY</span>
-              <span className="brand-text-sub">ADMINISTRATION</span>
-            </div>
-          </button>
+        <div className="navbar-brand">
+          <span className="brand-logo">🔧</span>
+          <h2>Admin Portal</h2>
         </div>
         
-        <div className="nav-actions">
-          <NotificationBell
+        <div className="navbar-actions">
+          {/* Thread the sound control props securely into the Bell Component */}
+          <NotificationBell 
             notifications={notifications}
             newTicketCount={newTicketCount}
             markAsRead={markAsRead}
             markAllAsRead={markAllAsRead}
             clearNotifications={clearNotifications}
+            isMuted={isMuted}
+            toggleMute={toggleMute}
+            volume={volume}
+            setVolume={setVolume}
           />
           
-          <div className="user-info">
-            <div className="user-avatar">
-              {currentAdmin?.email[0].toUpperCase()}
+          <div className="admin-profile">
+            <div className="admin-avatar">
+              {currentAdmin?.email?.charAt(0).toUpperCase() || 'A'}
             </div>
-            <span className="user-email-text">
-              {currentAdmin?.email}
-            </span>
+            <span className="user-email-text">{currentAdmin?.email}</span>
           </div>
           
           <button onClick={handleLogout} className="logout-btn">

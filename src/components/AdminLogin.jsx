@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { supabase } from '../lib/supabase' // Ensure this import is present
+import { supabase } from '../lib/supabase'
 
-const AdminLogin = ({ onLoginSuccess }) => {
+// Accepts both prop names to prevent crashes
+const AdminLogin = ({ onLogin, onLoginSuccess }) => {
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
@@ -23,14 +24,15 @@ const AdminLogin = ({ onLoginSuccess }) => {
     setError('')
 
     try {
-      const { data, error } = await supabase
+      // Renamed to fetchError so it doesn't conflict with the state error variable
+      const { data, error: fetchError } = await supabase
         .from('admins')
         .select('*')
         .eq('email', credentials.email)
         .eq('password_hash', credentials.password) 
         .single()
 
-      if (error || !data) {
+      if (fetchError || !data) {
         setError('Invalid email or password')
         return
       }
@@ -41,11 +43,18 @@ const AdminLogin = ({ onLoginSuccess }) => {
         loginTime: new Date().toISOString()
       }
 
+      // Save to local storage for persistence
       localStorage.setItem('adminSession', JSON.stringify(adminSession))
-      onLoginSuccess(adminSession)
       
-    } catch (error) {
-      console.error('Login error:', error)
+      // Safely call whichever function the dashboard provided
+      if (onLoginSuccess) {
+        onLoginSuccess(adminSession)
+      } else if (onLogin) {
+        onLogin(adminSession)
+      }
+      
+    } catch (err) {
+      console.error('Login error:', err)
       setError('An unexpected error occurred.')
     } finally {
       setIsLoading(false)
@@ -101,7 +110,6 @@ const AdminLogin = ({ onLoginSuccess }) => {
             </div>
           )}
 
-          {/* UPDATED BUTTON SECTION */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <button
               type="submit"
