@@ -18,20 +18,34 @@ const CompanyPage = () => {
 
   const fetchCompany = async () => {
     try {
-      // 2. Search by portal_code instead of slug
       const { data, error } = await supabase
         .from('companies')
         .select('*')
-        .eq('portal_code', portalCode) // Matches the new DB column
+        .eq('portal_code', portalCode) 
         .single()
 
       if (error) throw error
       
       setCompany(data)
       
-      // 3. Use the retrieved slug to set the theme
-      if (data && data.slug) {
-        setTheme(getTheme(data.slug))
+      // Check if the company has dynamic theme data from the database
+      if (data) {
+        if (data.logo_url) {
+          // Use dynamic theme from Supabase
+          setTheme({
+            name: data.name,
+            primary: data.primary_color,
+            secondary: data.secondary_color,
+            sidebarColor: data.sidebar_color,
+            textColor: data.text_color,
+            bgGradient: data.bg_gradient,
+            formDark: data.form_dark,
+            logo: data.logo_url
+          })
+        } else if (data.slug) {
+          // Fallback to themes.js for your legacy companies (Paysera, Stahl, Bestloan, etc.)
+          setTheme(getTheme(data.slug))
+        }
       }
       
     } catch (error) {
