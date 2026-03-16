@@ -16,6 +16,7 @@ const AdminDashboard = () => {
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [sessionStarted, setSessionStarted] = useState(false) // New state for session initialization
   const [currentAdmin, setCurrentAdmin] = useState(null)
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [activeTab, setActiveTab] = useState('tickets') // Navigation state
@@ -97,6 +98,7 @@ const AdminDashboard = () => {
     localStorage.removeItem('adminSession')
     setIsAuthenticated(false)
     setCurrentAdmin(null)
+    setSessionStarted(false) // Reset session start state on logout
   }
 
   const updateTicketStatus = async (ticketId, newStatus) => {
@@ -174,6 +176,77 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-container">
+      {/* Session Initialization Modal */}
+      {isAuthenticated && !sessionStarted && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(6px)'
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '3rem 2.5rem',
+            borderRadius: '16px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.5rem',
+            animation: 'fadeIn 0.3s ease-out'
+          }}>
+            {/* Large Bell Icon Container */}
+            <div style={{
+              background: '#eff6ff',
+              padding: '1.5rem',
+              borderRadius: '50%',
+              color: '#3b82f6',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '0.5rem'
+            }}>
+              <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+            </div>
+
+            <h2 style={{ margin: 0, color: '#0f172a', fontSize: '2rem', fontWeight: 'bold' }}>
+              Start Session
+            </h2>
+
+            <p style={{ margin: 0, color: '#475569', lineHeight: '1.6', fontSize: '1.05rem' }}>
+              Please initiate the session to ensure the receipt of notification alerts and sounds, and to officially confirm the commencement of the administrative session.
+            </p>
+
+            <button 
+              onClick={() => setSessionStarted(true)}
+              className="btn-primary"
+              style={{ 
+                width: '100%', 
+                padding: '1rem', 
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                marginTop: '1rem',
+                borderRadius: '8px'
+              }}
+            >
+              Start Administrative Session
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Navbar */}
       <nav className="admin-navbar">
         <div className="navbar-brand">
