@@ -95,6 +95,41 @@ const AdminDashboard = () => {
     }
   }
 
+  // --- REAL-TIME TABLE UPDATES ---
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const tableSubscription = supabase
+      .channel('dashboard-table-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Instantly add new tickets to the top of the table
+            setTickets(currentTickets => {
+              // Check to prevent accidental duplicates
+              if (currentTickets.some(t => t.id === payload.new.id)) return currentTickets
+              return [payload.new, ...currentTickets]
+            })
+          } 
+          else if (payload.eventType === 'UPDATE') {
+            // Instantly update statuses or edits made by other admins
+            setTickets(currentTickets => 
+              currentTickets.map(ticket => 
+                ticket.id === payload.new.id ? { ...ticket, ...payload.new } : ticket
+              )
+            )
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(tableSubscription)
+    }
+  }, [isAuthenticated])
+
   const handleLogout = () => {
     // Clear custom auth session instead of Supabase Auth
     localStorage.removeItem('adminSession')

@@ -167,71 +167,79 @@ const TicketsPage = ({
                   </td>
                 </tr>
               ) : (
-                currentTickets.map((ticket) => (
-                  <tr key={ticket.id}>
-                    <td className="ticket-date">
-                      {new Date(ticket.created_at).toLocaleDateString()}
-                      <span className="ticket-date-time">
-                        {new Date(ticket.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="ticket-company-name">
-                        {companies.find(c => c.id === ticket.company_id)?.name || ticket.companies?.name || 'Unknown'}
-                      </div>
-                      <div className="ticket-company-location">{ticket.location}</div>
-                    </td>
-                    <td>
-                      <div className="ticket-contact-name">{ticket.contact_name}</div>
-                      <div className="ticket-contact-email">{ticket.contact_email}</div>
-                    </td>
-                    <td>
-                      <div className="ticket-issue" title={ticket.issue_description}>
-                        {ticket.issue_description}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`ticket-status-badge status-${ticket.status}`}>
-                        {ticket.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td>
-                      <a 
-                        href={`/track/${ticket.tracking_token}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="ticket-tracking-link"
-                      >
-                        View
-                        <svg className="ticket-tracking-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                    </td>
-                    <td>
-                      <div className="ticket-actions">
-                        <button
-                          onClick={() => setSelectedTicket(ticket)}
-                          className="ticket-chat-btn"
-                          title="Open Chat Thread"
-                        >
-                          <span>💬</span> Chat
-                        </button>
+                currentTickets.map((ticket) => {
+                  // Check if the ticket was created in the last 5 minutes (300,000 ms)
+                  const isNew = (new Date() - new Date(ticket.created_at)) < 5 * 60 * 1000;
 
-                        <select
-                          value={ticket.status}
-                          onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
-                          className="ticket-status-select"
+                  return (
+                    <tr key={ticket.id} className={isNew ? 'new-ticket-row' : ''}>
+                      <td className="ticket-date">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {new Date(ticket.created_at).toLocaleDateString()}
+                          {isNew && <span className="new-ticket-badge">New</span>}
+                        </div>
+                        <span className="ticket-date-time">
+                          {new Date(ticket.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="ticket-company-name">
+                          {companies.find(c => c.id === ticket.company_id)?.name || ticket.companies?.name || 'Unknown'}
+                        </div>
+                        <div className="ticket-company-location">{ticket.location}</div>
+                      </td>
+                      <td>
+                        <div className="ticket-contact-name">{ticket.contact_name}</div>
+                        <div className="ticket-contact-email">{ticket.contact_email}</div>
+                      </td>
+                      <td>
+                        <div className="ticket-issue" title={ticket.issue_description}>
+                          {ticket.issue_description}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`ticket-status-badge status-${ticket.status}`}>
+                          {ticket.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td>
+                        <a 
+                          href={`/track/${ticket.tracking_token}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="ticket-tracking-link"
                         >
-                          <option value="open">Open</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          View
+                          <svg className="ticket-tracking-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </td>
+                      <td>
+                        <div className="ticket-actions">
+                          <button
+                            onClick={() => setSelectedTicket(ticket)}
+                            className="ticket-chat-btn"
+                            title="Open Chat Thread"
+                          >
+                            <span>💬</span> Chat
+                          </button>
+
+                          <select
+                            value={ticket.status}
+                            onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
+                            className="ticket-status-select"
+                          >
+                            <option value="open">Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                          </select>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

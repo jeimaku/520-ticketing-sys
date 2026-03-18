@@ -191,6 +191,42 @@
   vertical-align: top;
 }
 
+/* --- New Ticket Indicator --- */
+.new-ticket-row {
+  background-color: #f0fdf4 !important; /* Subtle green background */
+  border-left: 4px solid #009B4D !important; /* Brand green edge */
+  animation: highlightFadeIn 1s ease-out;
+}
+
+.new-ticket-row:hover {
+  background-color: #dcfce7 !important;
+}
+
+.new-ticket-badge {
+  background-color: #ef4444; /* Bright red to grab attention */
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: pulseBadge 2s infinite;
+}
+
+/* Flash animation when the row first appears */
+@keyframes highlightFadeIn {
+  0% { background-color: #bbf7d0; }
+  100% { background-color: #f0fdf4; }
+}
+
+/* Subtle heartbeat pulse for the badge */
+@keyframes pulseBadge {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
 /* Date Column */
 .ticket-date {
   white-space: nowrap;
