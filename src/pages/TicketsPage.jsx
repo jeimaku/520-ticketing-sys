@@ -108,7 +108,9 @@ const TicketsPage = ({
                       </span>
                     </td>
                     <td>
-                      <div className="ticket-company-name">{ticket.companies?.name || 'Unknown'}</div>
+                      <div className="ticket-company-name">
+                        {companies.find(c => c.id === ticket.company_id)?.name || ticket.companies?.name || 'Unknown'}
+                      </div>
                       <div className="ticket-company-location">{ticket.location}</div>
                     </td>
                     <td>
