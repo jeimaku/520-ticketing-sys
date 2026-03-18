@@ -185,7 +185,7 @@ const HomePage = () => {
                     onMouseOver={(e) => e.target.style.color = '#475569'}
                     onMouseOut={(e) => e.target.style.color = '#94a3b8'}
                   >
-                    "Admin Dashboard"
+                    Click here to access Admin Dashboard
                   </Link>
 
                   <div style={{ 

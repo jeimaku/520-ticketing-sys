@@ -1,7 +1,7 @@
 import React from 'react'
 import TicketThread from './TicketThread'
 
-const TicketModal = ({ ticket, onClose }) => {
+const TicketModal = ({ ticket, companies, onClose }) => {
   if (!ticket) return null
 
   const getStatusColor = (status) => {
@@ -125,7 +125,10 @@ const TicketModal = ({ ticket, onClose }) => {
                     🏢 Company
                   </div>
                   <div style={{ fontSize: '0.9rem', color: 'white', fontWeight: '500' }}>
-                    {ticket.companies?.name || 'Unknown'}
+                    
+                    {/* 👇 Replace the old logic with this new line: 👇 */}
+                    {companies?.find(c => c.id === ticket.company_id)?.name || ticket.companies?.name || 'Unknown'}
+                  
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>
                     📍 {ticket.location}

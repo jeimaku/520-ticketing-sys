@@ -11,6 +11,8 @@ import SettingsPage from '../pages/SettingsPage'
 import { useNotifications } from '../hooks/useNotifications'
 import './../styles/Admin.css'
 
+import fivetwentyLogo from '../assets/520-logo.png'
+
 const AdminDashboard = () => {
   const [tickets, setTickets] = useState([])
   const [companies, setCompanies] = useState([])
@@ -135,6 +137,19 @@ const AdminDashboard = () => {
     })
   }
 
+  const handleNotificationClick = (ticketId) => {
+    // 1. Switch to the tickets tab just in case they are on the analytics/settings page
+    setActiveTab('tickets')
+    
+    // 2. Find the actual ticket object from your loaded tickets array
+    const ticketToOpen = tickets.find(t => t.id === ticketId)
+    
+    // 3. Open the modal!
+    if (ticketToOpen) {
+      setSelectedTicket(ticketToOpen)
+    }
+  }
+
   // Filter logic
   const filteredTickets = tickets.filter(ticket => {
     const matchesCompany = filters.company === 'all' || ticket.company_id === filters.company
@@ -249,13 +264,17 @@ const AdminDashboard = () => {
 
       {/* Top Navbar */}
       <nav className="admin-navbar">
-        <div className="navbar-brand">
-          <span className="brand-logo">🔧</span>
-          <h2>Admin Portal</h2>
+        <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <img 
+            src={fivetwentyLogo} 
+            alt="520 IT Services" 
+            style={{ height: '96px', width: 'auto', objectFit: 'contain' }} 
+          />
+          <h2 style={{ margin: 0 }}>Admin Portal</h2>
         </div>
         
         <div className="navbar-actions">
-          {/* Thread the sound control props securely into the Bell Component */}
+          {/* 1. Notification Bell */}
           <NotificationBell 
             notifications={notifications}
             newTicketCount={newTicketCount}
@@ -266,15 +285,18 @@ const AdminDashboard = () => {
             toggleMute={toggleMute}
             volume={volume}
             setVolume={setVolume}
+            onNotificationClick={handleNotificationClick}
           />
           
-          <div className="admin-profile">
-            <div className="admin-avatar">
+          {/* 2. User Profile (Fixed class names) */}
+          <div className="user-info">
+            <div className="user-avatar">
               {currentAdmin?.email?.charAt(0).toUpperCase() || 'A'}
             </div>
             <span className="user-email-text">{currentAdmin?.email}</span>
           </div>
           
+          {/* 3. Logout Button */}
           <button onClick={handleLogout} className="logout-btn">
             Logout
           </button>
@@ -322,6 +344,7 @@ const AdminDashboard = () => {
       {selectedTicket && (
         <TicketModal 
           ticket={selectedTicket} 
+          companies={companies} /* <-- ADD THIS LINE */
           onClose={() => setSelectedTicket(null)} 
         />
       )}

@@ -10,7 +10,8 @@ const NotificationBell = ({
   isMuted,       // NEW: Prop to check if sound is muted
   toggleMute,    // NEW: Function to toggle the sound state
   volume,        // NEW: Prop for current volume level
-  setVolume      // NEW: Function to adjust volume
+  setVolume,     // NEW: Function to adjust volume
+  onNotificationClick,
 }) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -126,7 +127,13 @@ const NotificationBell = ({
                 <div
                   key={notification.id}
                   className={`notification-item ${!notification.read ? 'unread' : ''}`}
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => {
+                    markAsRead(notification.id)
+                    if (onNotificationClick && notification.ticketId) {
+                      onNotificationClick(notification.ticketId)
+                      setIsOpen(false) // Closes the dropdown so it's not in the way of the modal
+                    }
+                  }}
                 >
                   <div className="item-icon-box">
                     {!notification.read ? (

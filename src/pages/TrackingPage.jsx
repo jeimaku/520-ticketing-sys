@@ -143,7 +143,8 @@ const TrackingPage = () => {
         sender_type: AUTOMATION_CONFIG.BOT_TYPE,
         sender_name: AUTOMATION_CONFIG.BOT_NAME,
         message: text,
-        created_at: new Date().toISOString()
+        // ❌ REMOVE THIS LINE ENTIRELY:
+        // created_at: new Date().toISOString()
       }])
       
       if (error) throw error
@@ -166,7 +167,8 @@ const TrackingPage = () => {
         sender_type: 'user',
         sender_name: ticket.contact_name,
         message: option.question,
-        created_at: new Date().toISOString()
+        // ❌ REMOVE THIS LINE ENTIRELY:
+        // created_at: new Date().toISOString()
       }])
 
       setLastUpdated(prev => prev + 1)

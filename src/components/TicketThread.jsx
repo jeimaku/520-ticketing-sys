@@ -61,15 +61,22 @@ const TicketThread = ({
       if (error) throw error
       
       if (data) {
-        const hadNewMessages = showNotification && data.length > lastMessageCountRef.current
-        if (hadNewMessages) {
-          setHasNewMessages(true)
-          setShowTypingIndicator(true)
-          setTimeout(() => setShowTypingIndicator(false), 1000)
-          setTimeout(() => setHasNewMessages(false), 3000)
-          if (!userScrolledUp) {
-            setTimeout(() => scrollToBottom(), 500)
+        const newMsgCount = data.length - lastMessageCountRef.current
+        
+        if (showNotification && newMsgCount > 0) {
+          // 🛑 THE FIX: Check if the new messages actually came from the OTHER person
+          const newMessages = data.slice(lastMessageCountRef.current)
+          const fromSomeoneElse = newMessages.some(msg => msg.sender_type !== senderType)
+
+          // Only show the alert if it's from someone else
+          if (fromSomeoneElse) {
+            setHasNewMessages(true)
+            setShowTypingIndicator(true)
+            setTimeout(() => setShowTypingIndicator(false), 1000)
+            setTimeout(() => setHasNewMessages(false), 3000)
           }
+          
+          setTimeout(() => scrollToBottom(), 100)
         }
         
         lastMessageCountRef.current = data.length
@@ -93,12 +100,22 @@ const TicketThread = ({
   }
 
   useEffect(() => {
+    // 1. Fetch the initial history of messages
     fetchMessages()
-    setTimeout(() => scrollToBottom(true), 100)
-    const interval = setInterval(() => fetchMessages(true), 3000)
+    setTimeout(() => scrollToBottom(true), 500)
+
+    // 2. Set up the polling interval (checks every 3 seconds)
+    const interval = setInterval(() => {
+      fetchMessages(true)
+    }, 3000)
+    
     pollingIntervalRef.current = interval
+
+    // 3. Clean up the interval when leaving the page
     return () => clearInterval(interval)
-  }, [ticketId])
+    
+    // 🛑 THE FIX: We completely removed userScrolledUp from this array!
+  }, [ticketId, senderType])
 
   const handleReply = (messageData) => {
     setReplyingTo(messageData)
@@ -124,28 +141,32 @@ const TicketThread = ({
     let attachmentUrl = null
 
     try {
-     if (selectedFile) {
-  const fileExt = selectedFile.name.split('.').pop()
-  const fileName = `${Date.now()}.${fileExt}`
-  // Keep your filePath logic, but ensure it points to the right bucket below
-  const filePath = `ticket-attachments/${ticketId}/${fileName}`
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        // Fix 1: Cleaned up the file path so it doesn't duplicate the bucket name
+        const filePath = `${ticketId}/${fileName}`
 
-  const { error: uploadError } = await supabase.storage
-    .from('ticket-attachments') // UPDATED: Changed from 'attachments'
-    .upload(filePath, selectedFile)
+        const { error: uploadError } = await supabase.storage
+          .from('ticket-attachments')
+          .upload(filePath, selectedFile)
 
-  if (uploadError) {
-    console.warn('File upload failed:', uploadError)
-  } else {
-    const { data } = supabase.storage
-      .from('ticket-attachments') // UPDATED: Changed from 'attachments'
-      .getPublicUrl(filePath)
-    attachmentUrl = data.publicUrl
-  }
-}
+        // 🛑 THE CRITICAL FIX: If upload fails, stop everything and alert!
+        if (uploadError) {
+          console.error('File upload failed:', uploadError)
+          alert(`Upload failed: ${uploadError.message}`)
+          setUploading(false)
+          return // This stops the empty bubble from being created
+        }
+
+        const { data } = supabase.storage
+          .from('ticket-attachments')
+          .getPublicUrl(filePath)
+        attachmentUrl = data.publicUrl
+      }
 
       let finalMessage = newMessage.trim();
-      
+
       if (replyingTo) {
         const originalText = replyingTo.message || 'Attachment'
         const quotedText = originalText.length > 50 
@@ -160,22 +181,33 @@ const TicketThread = ({
         sender_name: senderName,
         message: finalMessage, 
         attachment_url: attachmentUrl,
-        created_at: new Date().toISOString(),
       }
 
-      const { error } = await supabase
+    // Add .select() so Supabase hands the message right back to us immediately
+      const { data: newlyInsertedMessage, error } = await supabase
         .from('ticket_messages')
         .insert([messageData])
+        .select()
 
       if (error) throw error
 
+      // ⚡ INSTANT UPDATE: Add it to the screen right now!
+      if (newlyInsertedMessage && newlyInsertedMessage.length > 0) {
+        setMessages(prevMessages => [...prevMessages, newlyInsertedMessage[0]])
+        lastMessageCountRef.current += 1 // Tell the poll to ignore this message
+      }
+
+      // Reset everything back to normal
       setNewMessage('')
       setSelectedFile(null)
       setReplyingTo(null)
       
+      // Fix 2: Reset the actual HTML file input so you can upload the same file again if needed
+      const fileInput = document.getElementById('file-input')
+      if (fileInput) fileInput.value = ''
+
       setTimeout(() => {
         scrollToBottom(true)
-        fetchMessages()
       }, 100)
 
     } catch (error) {
@@ -185,7 +217,7 @@ const TicketThread = ({
       setUploading(false)
     }
   }
-
+  
   const handleQuickReaction = (emoji) => {
     setNewMessage(emoji)
     setTimeout(() => {
