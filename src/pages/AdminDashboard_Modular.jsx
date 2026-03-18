@@ -137,14 +137,33 @@ const AdminDashboard = () => {
     })
   }
 
-  const handleNotificationClick = (ticketId) => {
-    // 1. Switch to the tickets tab just in case they are on the analytics/settings page
+  const handleNotificationClick = async (ticketId) => {
+    // 1. Switch to the tickets tab
     setActiveTab('tickets')
     
-    // 2. Find the actual ticket object from your loaded tickets array
-    const ticketToOpen = tickets.find(t => t.id === ticketId)
+    // 2. Try to find the ticket in our currently loaded list
+    let ticketToOpen = tickets.find(t => t.id === ticketId)
     
-    // 3. Open the modal!
+    // 3. 🛑 THE FIX: If it's a brand new ticket not in our list yet, fetch it directly!
+    if (!ticketToOpen) {
+      try {
+        const { data, error } = await supabase
+          .from('tickets')
+          .select('*')
+          .eq('id', ticketId)
+          .single()
+          
+        if (data && !error) {
+          ticketToOpen = data
+          // Instantly add it to the top of the table so the admin doesn't have to refresh
+          setTickets(prevTickets => [data, ...prevTickets])
+        }
+      } catch (error) {
+        console.error('Error fetching new ticket:', error)
+      }
+    }
+    
+    // 4. Open the modal!
     if (ticketToOpen) {
       setSelectedTicket(ticketToOpen)
     }
