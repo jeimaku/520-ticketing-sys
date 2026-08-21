@@ -98,7 +98,7 @@ The application uses a modern full-stack architecture where the frontend communi
 ## Development Tools
 
 - Git & GitHub
-- Vercel Deployment
+- Render Deployment
 - Database Schema Design
 
 ---
