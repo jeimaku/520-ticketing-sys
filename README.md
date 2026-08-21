@@ -1,16 +1,136 @@
-# React + Vite
+# 🎫 520 IT Ticketing System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An internal IT support ticketing platform developed for **520 IT Services** to improve technical issue reporting, tracking, and resolution workflows.
 
-Currently, two official plugins are available:
+The system helps organize support requests by providing structured ticket submission, status monitoring, and documentation of troubleshooting activities.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 📌 Overview
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+The 520 IT Ticketing System was developed to support daily IT operations by replacing manual tracking processes with a centralized ticket management workflow.
 
-## Expanding the ESLint configuration
+The platform allows users and IT personnel to:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Submit technical support requests
+- Track ticket progress
+- Manage issue statuses
+- Document troubleshooting activities
+- Maintain organized support records
+
+---
+
+# ✨ Key Features
+
+## 🎫 Ticket Management
+
+- Create and submit support tickets
+- Categorize technical concerns
+- Track ticket status
+- Monitor issue progress
+
+## 👨‍💻 IT Support Workflow
+
+- Support request documentation
+- Troubleshooting notes
+- Resolution tracking
+- Ticket history management
+
+## 🔐 User Management
+
+- Role-based access
+- Admin and user workflows
+- Protected application routes
+
+## 📂 File Management
+
+- Upload supporting files
+- Attach screenshots or documents related to issues
+
+---
+
+# 🏗️ System Architecture
+
+```
+Frontend
+React.js + Tailwind CSS
+
+        ↓
+
+Backend API
+Node.js + Express.js
+
+        ↓
+
+Database
+MySQL
+```
+
+---
+
+# 🛠️ Technologies Used
+
+### Frontend
+
+- React.js
+- Vite
+- Tailwind CSS
+- JavaScript
+
+### Backend
+
+- Node.js
+- Express.js
+- REST API
+
+### Database
+
+- MySQL
+
+### Tools
+
+- Git/GitHub
+- XAMPP
+- Postman
+
+---
+
+# 📸 Screenshots
+
+(Add screenshots here)
+
+Example:
+
+![Dashboard](./screenshots/dashboard.png)
+
+![Ticket Submission](./screenshots/ticket-form.png)
+
+---
+
+# 🚀 Deployment
+
+The application was deployed and tested for internal use within the 520 IT Services environment.
+
+---
+
+# 📚 What I Learned
+
+Through this project, I gained experience in:
+
+- Designing business workflow applications
+- Developing CRUD operations
+- Building REST API integrations
+- Managing relational databases
+- Understanding IT service management processes
+- Translating operational requirements into technical solutions
+
+---
+
+# 👨‍💻 Developer
+
+**Jay Mark Apelado**
+
+IT Support Specialist | Full Stack Developer
+
+GitHub:
+https://github.com/jeimaku
