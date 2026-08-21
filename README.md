@@ -1,16 +1,85 @@
-# React + Vite
+# 🎫 520 IT Ticketing System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack IT Service Management platform developed for **520 IT Services** to streamline technical support requests, incident tracking, and resolution workflows.
 
-Currently, two official plugins are available:
+The system provides a centralized platform where users can submit technical concerns while administrators can monitor, manage, and resolve support tickets efficiently.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+# 🎥 System Walkthrough
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+A complete demonstration of the system workflow:
 
-## Expanding the ESLint configuration
+- User authentication
+- Ticket submission
+- Ticket management
+- Status tracking
+- Resolution updates
+- Administrative dashboard
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+▶️ Demo walkthrough available:
+
+[View System Walkthrough](./docs/system-walkthrough.mp4)
+
+
+---
+
+# 🚀 Key Features
+
+## User Portal
+
+- Submit technical support requests
+- Track ticket status
+- View ticket history
+- Upload supporting files
+- Receive ticket updates
+
+
+## Admin Portal
+
+- Manage incoming tickets
+- Assign ticket status
+- Monitor support workload
+- Update resolutions
+- Review ticket history
+
+
+## Ticket Management
+
+- Structured ticket workflow
+- Incident tracking
+- Status management
+- Resolution documentation
+
+
+---
+
+# 🛠️ Technology Stack
+
+## Frontend
+
+- React.js
+- Vite
+- JavaScript
+- Tailwind CSS
+
+
+## Backend & Database
+
+- Node.js
+- Express.js
+- Supabase
+- PostgreSQL
+
+
+## Development Tools
+
+- Git & GitHub
+- REST API
+- Supabase Authentication
+- Vercel Deployment
+
+
+---
+
+# 🏗️ System Architecture
