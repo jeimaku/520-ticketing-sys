@@ -1,14 +1,14 @@
-# 🎫 520 IT Ticketing System
+# 🎫 520 IT Service Management System
 
-A full-stack IT Service Management platform developed for **520 IT Services** to streamline technical support requests, incident tracking, and resolution workflows.
+> A full-stack IT Service Management platform developed for **520 IT Services** to streamline technical support requests, incident tracking, and resolution workflows through a centralized ticketing system.
 
-The system provides a centralized platform where users can submit technical concerns while administrators can monitor, manage, and resolve support tickets efficiently.
+This system was developed to improve internal IT operations by providing a structured workflow for submitting, managing, tracking, and resolving technical support concerns.
 
 ---
 
-## 🎥 System Walkthrough
+# 🎥 System Walkthrough
 
-A quick overview of the ticket lifecycle and system workflow:
+A quick demonstration of the complete ticket lifecycle:
 
 - User authentication
 - Ticket submission
@@ -19,36 +19,55 @@ A quick overview of the ticket lifecycle and system workflow:
 
 ![520 IT Ticketing System Walkthrough](./docs/system-walkthrough.gif)
 
-
 ---
 
 # 🚀 Key Features
 
-## User Portal
+## 👤 User Portal
 
 - Submit technical support requests
-- Track ticket status
-- View ticket history
+- Track ticket status and progress
+- View submitted ticket history
 - Upload supporting files
-- Receive ticket updates
+- Monitor issue resolution updates
 
 
-## Admin Portal
+## 🛠️ Admin Portal
 
-- Manage incoming tickets
-- Assign ticket status
-- Monitor support workload
-- Update resolutions
-- Review ticket history
+- Manage incoming support tickets
+- Review ticket details and user concerns
+- Update ticket status
+- Document issue resolutions
+- Monitor support workflow
 
 
-## Ticket Management
+## 🎫 Ticket Management
 
-- Structured ticket workflow
-- Incident tracking
+- Centralized incident tracking
+- Structured ticket lifecycle workflow
 - Status management
 - Resolution documentation
+- Support request organization
 
+---
+
+# 🏗️ System Architecture
+
+```
+                 React Frontend
+                       |
+                       |
+                REST API Layer
+                       |
+                       |
+              Supabase Backend
+                       |
+        --------------------------------
+        |                              |
+ PostgreSQL Database        Authentication
+```
+
+The application uses a modern full-stack architecture where the frontend communicates with backend services through API-based workflows while Supabase manages database operations and authentication.
 
 ---
 
@@ -70,14 +89,85 @@ A quick overview of the ticket lifecycle and system workflow:
 - PostgreSQL
 
 
+## Authentication & Services
+
+- Supabase Authentication
+- REST API Integration
+
+
 ## Development Tools
 
 - Git & GitHub
-- REST API
-- Supabase Authentication
 - Vercel Deployment
-
+- Database Schema Design
 
 ---
 
-# 🏗️ System Architecture
+# 📂 Project Structure
+
+```
+520-it-service-management-system
+│
+├── src
+│   ├── components
+│   ├── pages
+│   ├── services
+│   └── assets
+│
+├── docs
+│   └── system-walkthrough.gif
+│
+├── public
+│
+├── package.json
+├── vite.config.js
+└── README.md
+```
+
+---
+
+# 💡 Development Purpose
+
+This project was created to improve the internal support workflow of an IT services environment.
+
+The system focuses on solving common operational challenges:
+
+- Managing multiple technical support requests
+- Tracking incident progress
+- Maintaining organized support records
+- Improving communication between users and support teams
+
+This project allowed me to apply both:
+
+- IT Support Operations knowledge
+- Full-stack Application Development skills
+
+---
+
+# 🔧 Development Highlights
+
+- Designed and developed a responsive ticket management interface using React.js
+- Implemented database-driven workflows using Supabase and PostgreSQL
+- Created structured ticket lifecycle processes for issue tracking and resolution
+- Integrated authentication and user management features
+- Applied component-based frontend development practices
+
+---
+
+# 👨‍💻 Developer
+
+**Jay Mark Apelado**
+
+BS Information Technology Graduate
+
+Focused on:
+
+- IT Support Engineering
+- Full-stack Development
+- Business Application Development
+- Workflow Automation
+- System Improvement
+
+---
+
+⭐ If you find this project interesting, feel free to explore the repository.
