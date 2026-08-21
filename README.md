@@ -6,9 +6,9 @@ The system provides a centralized platform where users can submit technical conc
 
 ---
 
-# 🎥 System Walkthrough
+## 🎥 System Walkthrough
 
-A complete demonstration of the system workflow:
+A quick overview of the ticket lifecycle and system workflow:
 
 - User authentication
 - Ticket submission
@@ -17,9 +17,7 @@ A complete demonstration of the system workflow:
 - Resolution updates
 - Administrative dashboard
 
-▶️ Demo walkthrough available:
-
-[View System Walkthrough](./docs/system-walkthrough.mp4)
+![520 IT Ticketing System Walkthrough](./docs/system-walkthrough.gif)
 
 
 ---
